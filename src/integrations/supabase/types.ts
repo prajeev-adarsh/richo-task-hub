@@ -9,6 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      proof_submissions: {
+        Row: {
+          doer_id: string
+          file_url: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["proof_status"]
+          submitted_at: string
+          task_id: string
+        }
+        Insert: {
+          doer_id: string
+          file_url: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["proof_status"]
+          submitted_at?: string
+          task_id: string
+        }
+        Update: {
+          doer_id?: string
+          file_url?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["proof_status"]
+          submitted_at?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proof_submissions_doer_id_fkey"
+            columns: ["doer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proof_submissions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_applications: {
         Row: {
           applied_at: string
@@ -156,6 +201,7 @@ export type Database = {
     }
     Enums: {
       application_status: "pending" | "accepted" | "rejected"
+      proof_status: "pending" | "accepted" | "rejected"
       task_category: "student" | "skilled" | "ai" | "custom"
       task_status:
         | "open"
@@ -281,6 +327,7 @@ export const Constants = {
   public: {
     Enums: {
       application_status: ["pending", "accepted", "rejected"],
+      proof_status: ["pending", "accepted", "rejected"],
       task_category: ["student", "skilled", "ai", "custom"],
       task_status: [
         "open",

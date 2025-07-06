@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import PostTask from "./pages/PostTask";
 import BrowseTasks from "./pages/BrowseTasks";
 import MyTasks from "./pages/MyTasks";
+import MyGigs from "./pages/MyGigs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/post-task" element={<PostTask />} />
           <Route path="/browse-tasks" element={<BrowseTasks />} />
           <Route path="/my-tasks" element={<MyTasks />} />
+          <Route path="/my-gigs" element={<MyGigs />} />
           <Route path="/client-dashboard" element={<Index />} />
           <Route path="/doer-dashboard" element={<Index />} />
           <Route path="/admin-dashboard" element={<Index />} />
