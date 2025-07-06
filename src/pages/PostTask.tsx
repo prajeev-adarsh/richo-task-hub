@@ -29,6 +29,7 @@ const taskSchema = z.object({
   budget: z.number().min(1, 'Budget must be greater than 0'),
   deadline: z.date(),
   proof_required: z.boolean().default(false),
+  pay_online: z.boolean().default(false),
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -47,8 +48,58 @@ const PostTask = () => {
       is_remote: false,
       budget: 0,
       proof_required: false,
+      pay_online: false,
     },
   });
+
+  const initializeRazorpayPayment = (taskId: string, amount: number) => {
+    const options = {
+      key: 'rzp_test_RAZORPAY_KEY_ID', // Will be replaced with actual key
+      amount: amount * 100, // Razorpay expects amount in paise
+      currency: 'INR',
+      name: 'Task Payment',
+      description: 'Payment for posted task',
+      handler: async (response: any) => {
+        try {
+          // Verify payment and update database
+          const { error } = await supabase.functions.invoke('verify-payment', {
+            body: {
+              razorpay_payment_id: response.razorpay_payment_id,
+              task_id: taskId,
+              client_id: user?.id,
+              amount: amount
+            }
+          });
+
+          if (error) throw error;
+
+          toast({
+            title: "🎉 Payment Successful!",
+            description: "Your task has been posted and payment completed",
+          });
+
+          navigate('/my-tasks');
+        } catch (error) {
+          console.error('Payment verification failed:', error);
+          toast({
+            title: "Payment Error",
+            description: "Payment verification failed. Please contact support.",
+            variant: "destructive",
+          });
+        }
+      },
+      prefill: {
+        email: user?.email,
+        name: user?.name,
+      },
+      theme: {
+        color: '#3B82F6',
+      },
+    };
+
+    const rzp = new (window as any).Razorpay(options);
+    rzp.open();
+  };
 
   const onSubmit = async (data: TaskFormData) => {
     if (!user) {
@@ -61,7 +112,7 @@ const PostTask = () => {
     }
 
     try {
-      const { error } = await supabase.from('tasks').insert({
+      const { data: taskData, error } = await supabase.from('tasks').insert({
         title: data.title,
         description: data.description,
         category: data.category,
@@ -71,16 +122,21 @@ const PostTask = () => {
         deadline: data.deadline.toISOString(),
         proof_required: data.proof_required,
         client_id: user.id,
-      });
+        payment_status: data.pay_online ? 'paid' : 'unpaid',
+      }).select().single();
 
       if (error) throw error;
 
-      toast({
-        title: "🎉 Task Posted Successfully",
-        description: "Your task has been posted and is now visible to doers",
-      });
-
-      navigate('/my-tasks');
+      if (data.pay_online) {
+        // Initiate Razorpay payment
+        initializeRazorpayPayment(taskData.id, data.budget);
+      } else {
+        toast({
+          title: "🎉 Task Posted Successfully",
+          description: "Your task has been posted and is now visible to doers",
+        });
+        navigate('/my-tasks');
+      }
     } catch (error) {
       console.error('Error posting task:', error);
       toast({
@@ -275,8 +331,31 @@ const PostTask = () => {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="pay_online"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Pay Now Online via Razorpay
+                        </FormLabel>
+                        <div className="text-sm text-muted-foreground">
+                          Pay the task amount upfront using Razorpay gateway
+                        </div>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
                 <Button type="submit" className="w-full">
-                  Post Task
+                  {form.watch('pay_online') ? 'Post Task & Pay Now' : 'Post Task'}
                 </Button>
               </form>
             </Form>

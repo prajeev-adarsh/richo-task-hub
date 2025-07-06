@@ -9,6 +9,61 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      payments: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string
+          doer_id: string | null
+          id: string
+          payment_status: string
+          razorpay_payment_id: string | null
+          task_id: string
+        }
+        Insert: {
+          amount: number
+          client_id: string
+          created_at?: string
+          doer_id?: string | null
+          id?: string
+          payment_status?: string
+          razorpay_payment_id?: string | null
+          task_id: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string
+          doer_id?: string | null
+          id?: string
+          payment_status?: string
+          razorpay_payment_id?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_payments_client_id"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_payments_doer_id"
+            columns: ["doer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_payments_task_id"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proof_submissions: {
         Row: {
           doer_id: string
@@ -157,6 +212,7 @@ export type Database = {
           id: string
           is_remote: boolean
           location: string
+          payment_status: string | null
           proof_required: boolean
           status: Database["public"]["Enums"]["task_status"]
           title: string
@@ -172,6 +228,7 @@ export type Database = {
           id?: string
           is_remote?: boolean
           location: string
+          payment_status?: string | null
           proof_required?: boolean
           status?: Database["public"]["Enums"]["task_status"]
           title: string
@@ -187,6 +244,7 @@ export type Database = {
           id?: string
           is_remote?: boolean
           location?: string
+          payment_status?: string | null
           proof_required?: boolean
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
