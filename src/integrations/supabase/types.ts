@@ -54,6 +54,58 @@ export type Database = {
           },
         ]
       }
+      ratings: {
+        Row: {
+          created_at: string
+          from_user: string
+          id: string
+          review: string | null
+          stars: number
+          task_id: string
+          to_user: string
+        }
+        Insert: {
+          created_at?: string
+          from_user: string
+          id?: string
+          review?: string | null
+          stars: number
+          task_id: string
+          to_user: string
+        }
+        Update: {
+          created_at?: string
+          from_user?: string
+          id?: string
+          review?: string | null
+          stars?: number
+          task_id?: string
+          to_user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ratings_to_user_fkey"
+            columns: ["to_user"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_applications: {
         Row: {
           applied_at: string

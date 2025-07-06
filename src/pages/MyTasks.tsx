@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, User } from 'lucide-react';
+import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, User, Eye, Download, Star, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 
 interface Task {
   id: string;
@@ -23,6 +25,12 @@ interface Task {
   status: string;
   doer_id: string | null;
   created_at: string;
+  doer?: {
+    id: string;
+    name: string;
+    email: string;
+    photo_url: string | null;
+  };
 }
 
 interface TaskApplication {
@@ -42,15 +50,40 @@ interface TaskApplication {
   };
 }
 
+interface ProofSubmission {
+  id: string;
+  task_id: string;
+  doer_id: string;
+  file_url: string;
+  notes: string;
+  submitted_at: string;
+  status: string;
+}
+
+interface Rating {
+  task_id: string;
+}
+
 const MyTasks = () => {
   const { user } = useUser();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [applications, setApplications] = useState<TaskApplication[]>([]);
+  const [proofSubmissions, setProofSubmissions] = useState<ProofSubmission[]>([]);
+  const [ratings, setRatings] = useState<Rating[]>([]);
   const [loading, setLoading] = useState(true);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
+  const [showProofModal, setShowProofModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedProof, setSelectedProof] = useState<ProofSubmission | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
+  const [processingProof, setProcessingProof] = useState<string | null>(null);
+  
+  // Rating state
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -58,13 +91,23 @@ const MyTasks = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (tasks.length > 0) {
+      fetchProofSubmissions();
+      fetchRatings();
+    }
+  }, [tasks]);
+
   const fetchTasks = async () => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .select('*')
+        .select(`
+          *,
+          doer:users!tasks_doer_id_fkey(id, name, email, photo_url)
+        `)
         .eq('client_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -105,10 +148,180 @@ const MyTasks = () => {
     }
   };
 
+  const fetchProofSubmissions = async () => {
+    if (!user || tasks.length === 0) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('proof_submissions')
+        .select('*')
+        .in('task_id', tasks.map(task => task.id));
+
+      if (error) throw error;
+      setProofSubmissions(data || []);
+    } catch (error) {
+      console.error('Error fetching proof submissions:', error);
+    }
+  };
+
+  const fetchRatings = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('ratings')
+        .select('task_id')
+        .eq('from_user', user.id);
+
+      if (error) throw error;
+      setRatings(data || []);
+    } catch (error) {
+      console.error('Error fetching ratings:', error);
+    }
+  };
+
+  const getProofForTask = (taskId: string) => {
+    return proofSubmissions.find(proof => proof.task_id === taskId);
+  };
+
+  const hasRated = (taskId: string) => {
+    return ratings.some(rating => rating.task_id === taskId);
+  };
+
   const handleViewApplications = async (task: Task) => {
     setSelectedTask(task);
     setShowApplicationsModal(true);
     await fetchApplications(task.id);
+  };
+
+  const handleViewProof = (task: Task) => {
+    const proof = getProofForTask(task.id);
+    if (proof) {
+      setSelectedTask(task);
+      setSelectedProof(proof);
+      setShowProofModal(true);
+    }
+  };
+
+  const handleAcceptProof = async () => {
+    if (!selectedTask || !selectedProof) return;
+
+    setProcessingProof('accept');
+    try {
+      // Update task status to completed
+      const { error: taskError } = await supabase
+        .from('tasks')
+        .update({ status: 'completed' })
+        .eq('id', selectedTask.id);
+
+      if (taskError) throw taskError;
+
+      // Update proof submission status to accepted
+      const { error: proofError } = await supabase
+        .from('proof_submissions')
+        .update({ status: 'accepted' })
+        .eq('id', selectedProof.id);
+
+      if (proofError) throw proofError;
+
+      toast({
+        title: "✅ Proof accepted!",
+        description: "Task has been marked as completed",
+      });
+
+      // Refresh tasks and close modal
+      fetchTasks();
+      fetchProofSubmissions();
+      setShowProofModal(false);
+      
+      // Show rating modal if not already rated
+      if (!hasRated(selectedTask.id)) {
+        setTimeout(() => {
+          setShowRatingModal(true);
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error accepting proof:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept proof",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingProof(null);
+    }
+  };
+
+  const handleRejectProof = async () => {
+    if (!selectedProof) return;
+
+    setProcessingProof('reject');
+    try {
+      const { error } = await supabase
+        .from('proof_submissions')
+        .update({ status: 'rejected' })
+        .eq('id', selectedProof.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "❌ Proof rejected",
+        description: "The doer can now re-upload their proof",
+      });
+
+      // Refresh proof submissions and close modal
+      fetchProofSubmissions();
+      setShowProofModal(false);
+    } catch (error) {
+      console.error('Error rejecting proof:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject proof",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingProof(null);
+    }
+  };
+
+  const handleSubmitRating = async () => {
+    if (!selectedTask || !selectedTask.doer || rating === 0) return;
+
+    setSubmittingRating(true);
+    try {
+      const { error } = await supabase
+        .from('ratings')
+        .insert({
+          task_id: selectedTask.id,
+          from_user: user!.id,
+          to_user: selectedTask.doer.id,
+          stars: rating,
+          review: review.trim() || null
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "⭐ Rating submitted!",
+        description: "Thank you for your feedback",
+      });
+
+      // Refresh ratings and close modal
+      fetchRatings();
+      setShowRatingModal(false);
+      setRating(0);
+      setReview('');
+      setSelectedTask(null);
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit rating",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingRating(false);
+    }
   };
 
   const handleAssignTask = async (application: TaskApplication) => {
@@ -280,6 +493,35 @@ const MyTasks = () => {
                       <Users className="h-4 w-4 mr-1" />
                       View Applications
                     </Button>
+                    
+                    {/* Show View Proof button for in_progress tasks with proof */}
+                    {task.status === 'in_progress' && getProofForTask(task.id) && (
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleViewProof(task)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Proof
+                      </Button>
+                    )}
+                    
+                    {/* Show Rate Doer button for completed tasks without rating */}
+                    {task.status === 'completed' && !hasRated(task.id) && task.doer && (
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedTask(task);
+                          setShowRatingModal(true);
+                        }}
+                      >
+                        <Star className="h-4 w-4 mr-1" />
+                        Rate Doer
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -374,6 +616,161 @@ const MyTasks = () => {
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowApplicationsModal(false)}>
                 Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Proof Review Modal */}
+        <Dialog open={showProofModal} onOpenChange={setShowProofModal}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Review Proof of Completion</DialogTitle>
+              <DialogDescription>
+                {selectedTask && `Proof for: ${selectedTask.title}`}
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedProof && (
+              <div className="space-y-6">
+                {/* File Preview/Download */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Submitted File</Label>
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-8 w-8 text-blue-600" />
+                      <div className="flex-1">
+                        <p className="font-medium">Proof Document</p>
+                        <p className="text-sm text-muted-foreground">
+                          Submitted {format(new Date(selectedProof.submitted_at), 'MMM dd, yyyy at h:mm a')}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(selectedProof.file_url, '_blank')}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Doer's Notes */}
+                {selectedProof.notes && (
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Doer's Notes</Label>
+                    <div className="border rounded-lg p-4 bg-muted/50">
+                      <p className="text-sm">{selectedProof.notes}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Proof Status */}
+                <div className="flex items-center gap-2">
+                  <Label>Status:</Label>
+                  <Badge variant={
+                    selectedProof.status === 'accepted' ? 'default' :
+                    selectedProof.status === 'rejected' ? 'destructive' : 'secondary'
+                  }>
+                    {selectedProof.status.charAt(0).toUpperCase() + selectedProof.status.slice(1)}
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {selectedProof?.status === 'pending' && (
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setShowProofModal(false)}>
+                  Close
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleRejectProof}
+                  disabled={processingProof === 'reject'}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  {processingProof === 'reject' ? 'Rejecting...' : 'Reject Proof'}
+                </Button>
+                <Button
+                  onClick={handleAcceptProof}
+                  disabled={processingProof === 'accept'}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {processingProof === 'accept' ? 'Accepting..' : 'Accept Proof'}
+                </Button>
+              </DialogFooter>
+            )}
+
+            {selectedProof?.status !== 'pending' && (
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowProofModal(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Rating Modal */}
+        <Dialog open={showRatingModal} onOpenChange={setShowRatingModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>⭐ Rate Doer</DialogTitle>
+              <DialogDescription>
+                How was your experience with {selectedTask?.doer?.name}?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Star Rating */}
+              <div className="space-y-3">
+                <Label>Rating (1-5 stars)</Label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className={`p-1 ${rating >= star ? 'text-yellow-400' : 'text-gray-300'} hover:text-yellow-400 transition-colors`}
+                    >
+                      <Star className="h-8 w-8 fill-current" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Review Text */}
+              <div className="space-y-3">
+                <Label htmlFor="review">Review (Optional)</Label>
+                <Textarea
+                  id="review"
+                  placeholder="Share your feedback about the work quality, communication, etc..."
+                  value={review}
+                  onChange={(e) => setReview(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowRatingModal(false);
+                  setRating(0);
+                  setReview('');
+                }}
+                disabled={submittingRating}
+              >
+                Skip
+              </Button>
+              <Button
+                onClick={handleSubmitRating}
+                disabled={rating === 0 || submittingRating}
+              >
+                {submittingRating ? 'Submitting...' : 'Submit Rating'}
               </Button>
             </DialogFooter>
           </DialogContent>
