@@ -1,13 +1,49 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React from 'react';
+import { LanguageProvider } from '@/components/LanguageContext';
+import { UserProvider, useUser } from '@/components/UserContext';
+import Navigation from '@/components/Navigation';
+import RoleSelector from '@/components/RoleSelector';
+import ClientDashboard from './ClientDashboard';
+import DoerDashboard from './DoerDashboard';
+import AdminDashboard from './AdminDashboard';
+
+const AppContent = () => {
+  const { isAuthenticated, role } = useUser();
+
+  if (!isAuthenticated) {
+    return <RoleSelector />;
+  }
+
+  const renderDashboard = () => {
+    switch (role) {
+      case 'client':
+        return <ClientDashboard />;
+      case 'doer':
+        return <DoerDashboard />;
+      case 'admin':
+        return <AdminDashboard />;
+      default:
+        return <RoleSelector />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main>
+        {renderDashboard()}
+      </main>
+    </div>
+  );
+};
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <UserProvider>
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
+    </UserProvider>
   );
 };
 
