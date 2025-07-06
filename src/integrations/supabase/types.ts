@@ -9,6 +9,69 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      tasks: {
+        Row: {
+          budget: number
+          category: Database["public"]["Enums"]["task_category"]
+          client_id: string
+          created_at: string
+          deadline: string
+          description: string
+          doer_id: string | null
+          id: string
+          is_remote: boolean
+          location: string
+          proof_required: boolean
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+        }
+        Insert: {
+          budget: number
+          category: Database["public"]["Enums"]["task_category"]
+          client_id: string
+          created_at?: string
+          deadline: string
+          description: string
+          doer_id?: string | null
+          id?: string
+          is_remote?: boolean
+          location: string
+          proof_required?: boolean
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+        }
+        Update: {
+          budget?: number
+          category?: Database["public"]["Enums"]["task_category"]
+          client_id?: string
+          created_at?: string
+          deadline?: string
+          description?: string
+          doer_id?: string | null
+          id?: string
+          is_remote?: boolean
+          location?: string
+          proof_required?: boolean
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_doer_id_fkey"
+            columns: ["doer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           auth_user_id: string
@@ -53,6 +116,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      task_category: "student" | "skilled" | "ai" | "custom"
+      task_status:
+        | "open"
+        | "assigned"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
       user_language: "en" | "te" | "hi"
       user_role: "client" | "doer" | "admin"
     }
@@ -170,6 +240,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      task_category: ["student", "skilled", "ai", "custom"],
+      task_status: [
+        "open",
+        "assigned",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
       user_language: ["en", "te", "hi"],
       user_role: ["client", "doer", "admin"],
     },
