@@ -25,6 +25,7 @@ interface Task {
   status: string;
   client_id: string;
   created_at: string;
+  payment_status: string | null;
   client: {
     id: string;
     name: string;
@@ -266,6 +267,11 @@ const MyGigs = () => {
                     <CardTitle className="text-lg line-clamp-2">{task.title}</CardTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">In Progress</Badge>
+                      {task.payment_status === 'paid' && (
+                        <Badge variant="default">
+                          ✅ Client marked task as paid
+                        </Badge>
+                      )}
                       {hasProof && (
                         <Badge variant={
                           proofStatus === 'accepted' ? 'default' :

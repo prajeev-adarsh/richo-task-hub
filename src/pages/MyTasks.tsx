@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, User, Eye, Download, Star, FileText } from 'lucide-react';
+import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, User, Eye, Download, Star, FileText, CreditCard, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,11 +26,13 @@ interface Task {
   status: string;
   doer_id: string | null;
   created_at: string;
+  payment_status: string | null;
   doer?: {
     id: string;
     name: string;
     email: string;
     photo_url: string | null;
+    upi_id: string | null;
   };
 }
 
@@ -75,15 +78,20 @@ const MyTasks = () => {
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
   const [showProofModal, setShowProofModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedProof, setSelectedProof] = useState<ProofSubmission | null>(null);
   const [assigning, setAssigning] = useState<string | null>(null);
   const [processingProof, setProcessingProof] = useState<string | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
   
   // Rating state
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
+
+  // Payment state
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -106,7 +114,7 @@ const MyTasks = () => {
         .from('tasks')
         .select(`
           *,
-          doer:users!tasks_doer_id_fkey(id, name, email, photo_url)
+          doer:users!tasks_doer_id_fkey(id, name, email, photo_url, upi_id)
         `)
         .eq('client_id', user.id)
         .order('created_at', { ascending: false });
@@ -406,6 +414,105 @@ const MyTasks = () => {
     }
   };
 
+  const handlePaymentFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select a file smaller than 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      setPaymentFile(file);
+    }
+  };
+
+  const uploadPaymentProof = async (file: File, taskId: string): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `payments/${user?.id}/${taskId}/${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('proofs')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('proofs')
+      .getPublicUrl(fileName);
+
+    return data.publicUrl;
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!selectedTask || !selectedTask.doer || !user) return;
+
+    setProcessingPayment(true);
+    try {
+      let uploadedProofUrl = null;
+      
+      // Upload payment proof if file is selected
+      if (paymentFile) {
+        uploadedProofUrl = await uploadPaymentProof(paymentFile, selectedTask.id);
+      }
+
+      // Save payment record
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          task_id: selectedTask.id,
+          client_id: user.id,
+          doer_id: selectedTask.doer.id,
+          amount: selectedTask.budget,
+          payment_mode: 'upi_manual',
+          payment_status: 'paid',
+          uploaded_proof: uploadedProofUrl
+        });
+
+      if (paymentError) throw paymentError;
+
+      // Update task payment status
+      const { error: taskError } = await supabase
+        .from('tasks')
+        .update({ payment_status: 'paid' })
+        .eq('id', selectedTask.id);
+
+      if (taskError) throw taskError;
+
+      toast({
+        title: "✅ Payment marked as paid",
+        description: `You've confirmed payment of ₹${selectedTask.budget.toLocaleString()} to ${selectedTask.doer.name}`,
+      });
+
+      // Refresh tasks and close modal
+      fetchTasks();
+      setShowPaymentModal(false);
+      setPaymentFile(null);
+      setSelectedTask(null);
+    } catch (error) {
+      console.error('Error marking payment as paid:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark payment as paid",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const openPaymentModal = (task: Task) => {
+    setSelectedTask(task);
+    setShowPaymentModal(true);
+    setPaymentFile(null);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open': return 'bg-blue-100 text-blue-800';
@@ -480,6 +587,46 @@ const MyTasks = () => {
                       <span>{format(new Date(task.deadline), 'MMM dd, yyyy')}</span>
                     </div>
                   </div>
+
+                  {/* Payment Section for in_progress tasks with doer */}
+                  {task.status === 'in_progress' && task.doer && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-sm">Payment</span>
+                          {task.payment_status === 'paid' && (
+                            <Badge variant="default" className="ml-auto">
+                              ✅ Marked as Paid
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {task.payment_status !== 'paid' && (
+                          <div className="space-y-2">
+                            <div className="text-sm text-muted-foreground">
+                              <span className="font-medium">Doer:</span> {task.doer.name}
+                            </div>
+                            {task.doer.upi_id && (
+                              <div className="text-sm">
+                                <span className="font-medium">UPI ID:</span> {task.doer.upi_id}
+                              </div>
+                            )}
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => openPaymentModal(task)}
+                            >
+                              <CreditCard className="h-4 w-4 mr-2" />
+                              Mark as Paid
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
 
                   <Separator />
 
@@ -771,6 +918,57 @@ const MyTasks = () => {
                 disabled={rating === 0 || submittingRating}
               >
                 {submittingRating ? 'Submitting...' : 'Submit Rating'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Payment Confirmation Modal */}
+        <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Payment</DialogTitle>
+              <DialogDescription>
+                {selectedTask && selectedTask.doer && 
+                  `You confirm that you've paid ₹${selectedTask.budget.toLocaleString()} to ${selectedTask.doer.name} via UPI.`
+                }
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="payment-proof">Payment Screenshot (Optional)</Label>
+                <Input
+                  id="payment-proof"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={handlePaymentFileSelect}
+                  disabled={processingPayment}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Supported formats: JPG, PNG, PDF (max 5MB)
+                </p>
+                {paymentFile && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span>{paymentFile.name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowPaymentModal(false)}
+                disabled={processingPayment}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleMarkAsPaid}
+                disabled={processingPayment}
+              >
+                {processingPayment ? 'Processing...' : 'Confirm Payment'}
               </Button>
             </DialogFooter>
           </DialogContent>

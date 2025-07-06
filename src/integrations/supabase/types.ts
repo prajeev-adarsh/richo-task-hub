@@ -16,9 +16,11 @@ export type Database = {
           created_at: string
           doer_id: string | null
           id: string
+          payment_mode: string | null
           payment_status: string
           razorpay_payment_id: string | null
           task_id: string
+          uploaded_proof: string | null
         }
         Insert: {
           amount: number
@@ -26,9 +28,11 @@ export type Database = {
           created_at?: string
           doer_id?: string | null
           id?: string
+          payment_mode?: string | null
           payment_status?: string
           razorpay_payment_id?: string | null
           task_id: string
+          uploaded_proof?: string | null
         }
         Update: {
           amount?: number
@@ -36,9 +40,11 @@ export type Database = {
           created_at?: string
           doer_id?: string | null
           id?: string
+          payment_mode?: string | null
           payment_status?: string
           razorpay_payment_id?: string | null
           task_id?: string
+          uploaded_proof?: string | null
         }
         Relationships: [
           {
@@ -277,6 +283,7 @@ export type Database = {
           phone: string | null
           photo_url: string | null
           role: Database["public"]["Enums"]["user_role"]
+          upi_id: string | null
         }
         Insert: {
           auth_user_id: string
@@ -288,6 +295,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           role: Database["public"]["Enums"]["user_role"]
+          upi_id?: string | null
         }
         Update: {
           auth_user_id?: string
@@ -299,6 +307,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          upi_id?: string | null
         }
         Relationships: []
       }
