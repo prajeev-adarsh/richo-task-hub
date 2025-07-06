@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      task_applications: {
+        Row: {
+          applied_at: string
+          doer_id: string
+          id: string
+          status: Database["public"]["Enums"]["application_status"]
+          task_id: string
+        }
+        Insert: {
+          applied_at?: string
+          doer_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["application_status"]
+          task_id: string
+        }
+        Update: {
+          applied_at?: string
+          doer_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["application_status"]
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_applications_doer_id_fkey"
+            columns: ["doer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_applications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           budget: number
@@ -116,6 +155,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      application_status: "pending" | "accepted" | "rejected"
       task_category: "student" | "skilled" | "ai" | "custom"
       task_status:
         | "open"
@@ -240,6 +280,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      application_status: ["pending", "accepted", "rejected"],
       task_category: ["student", "skilled", "ai", "custom"],
       task_status: [
         "open",

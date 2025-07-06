@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import PostTask from "./pages/PostTask";
+import BrowseTasks from "./pages/BrowseTasks";
 import MyTasks from "./pages/MyTasks";
 import NotFound from "./pages/NotFound";
 
@@ -21,6 +22,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/post-task" element={<PostTask />} />
+          <Route path="/browse-tasks" element={<BrowseTasks />} />
           <Route path="/my-tasks" element={<MyTasks />} />
           <Route path="/client-dashboard" element={<Index />} />
           <Route path="/doer-dashboard" element={<Index />} />
