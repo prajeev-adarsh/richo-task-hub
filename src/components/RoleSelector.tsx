@@ -1,28 +1,21 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from './LanguageContext';
-import { useUser, UserRole } from './UserContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Search, Shield } from 'lucide-react';
 
 const RoleSelector = () => {
   const { t } = useLanguage();
-  const { setUser } = useUser();
+  const navigate = useNavigate();
 
-  const handleRoleSelect = (role: UserRole) => {
-    // Simulate user login - in real app this would be handled by authentication
-    const mockUser = {
-      id: '1',
-      name: 'Demo User',
-      email: 'demo@richo.com',
-      role: role!,
-    };
-    setUser(mockUser);
+  const handleGetStarted = () => {
+    navigate('/auth');
   };
 
   const roles = [
     {
-      role: 'client' as UserRole,
+      role: 'client',
       icon: PlusCircle,
       title: t('client'),
       description: t('clientTagline'),
@@ -30,7 +23,7 @@ const RoleSelector = () => {
       bgColor: 'bg-primary/10',
     },
     {
-      role: 'doer' as UserRole,
+      role: 'doer',
       icon: Search,
       title: t('doer'),
       description: t('doerTagline'),
@@ -38,7 +31,7 @@ const RoleSelector = () => {
       bgColor: 'bg-accent/10',
     },
     {
-      role: 'admin' as UserRole,
+      role: 'admin',
       icon: Shield,
       title: t('admin'),
       description: 'Manage platform and users',
@@ -68,7 +61,7 @@ const RoleSelector = () => {
               <Card
                 key={roleOption.role}
                 className="cursor-pointer hover:shadow-card transition-all duration-300 border-2 hover:border-primary/20 rounded-2xl"
-                onClick={() => handleRoleSelect(roleOption.role)}
+                onClick={handleGetStarted}
               >
                 <CardHeader className="text-center pb-4">
                   <div className={`w-16 h-16 ${roleOption.bgColor} rounded-2xl mx-auto mb-4 flex items-center justify-center`}>
@@ -83,6 +76,7 @@ const RoleSelector = () => {
                   <Button 
                     className="w-full rounded-2xl" 
                     variant={roleOption.role === 'client' ? 'default' : roleOption.role === 'doer' ? 'secondary' : 'outline'}
+                    onClick={handleGetStarted}
                   >
                     {t('getStarted')}
                   </Button>

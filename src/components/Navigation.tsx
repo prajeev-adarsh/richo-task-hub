@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 const Navigation = () => {
-  const { role, isAuthenticated } = useUser();
+  const { role, isAuthenticated, signOut } = useUser();
   const { t, language, setLanguage } = useLanguage();
 
   if (!isAuthenticated) return null;
@@ -81,7 +81,7 @@ const Navigation = () => {
             ))}
           </div>
 
-          {/* Language Selector */}
+          {/* Language Selector & User Menu */}
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
@@ -98,8 +98,21 @@ const Navigation = () => {
               <span className="uppercase">{language}</span>
             </Button>
 
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {/* Open user menu */}}
+            >
               <User className="h-4 w-4" />
+            </Button>
+
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => signOut()}
+              className="text-destructive hover:text-destructive"
+            >
+              Logout
             </Button>
           </div>
         </div>

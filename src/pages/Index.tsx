@@ -8,7 +8,20 @@ import DoerDashboard from './DoerDashboard';
 import AdminDashboard from './AdminDashboard';
 
 const AppContent = () => {
-  const { isAuthenticated, role } = useUser();
+  const { isAuthenticated, role, isLoading } = useUser();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-2xl">R</span>
+          </div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <RoleSelector />;

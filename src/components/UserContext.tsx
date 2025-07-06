@@ -1,20 +1,28 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 export type UserRole = 'client' | 'doer' | 'admin' | null;
 
 interface User {
   id: string;
+  auth_user_id: string;
   name: string;
   email: string;
+  phone?: string;
   role: UserRole;
-  avatar?: string;
+  language: 'en' | 'te' | 'hi';
+  photo_url?: string;
+  created_at: string;
 }
 
 interface UserContextType {
   user: User | null;
-  setUser: (user: User | null) => void;
+  session: Session | null;
   isAuthenticated: boolean;
   role: UserRole;
+  isLoading: boolean;
+  signOut: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -25,12 +33,73 @@ interface UserProviderProps {
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = !!user;
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        
+        if (session?.user) {
+          // Fetch user profile data
+          setTimeout(async () => {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('*')
+              .eq('auth_user_id', session.user.id)
+              .single();
+            
+            setUser(profile);
+            setIsLoading(false);
+          }, 0);
+        } else {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        supabase
+          .from('users')
+          .select('*')
+          .eq('auth_user_id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            setUser(profile);
+            setIsLoading(false);
+          });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+  };
+
+  const isAuthenticated = !!session?.user && !!user;
   const role = user?.role || null;
 
   return (
-    <UserContext.Provider value={{ user, setUser, isAuthenticated, role }}>
+    <UserContext.Provider value={{ 
+      user, 
+      session, 
+      isAuthenticated, 
+      role, 
+      isLoading, 
+      signOut 
+    }}>
       {children}
     </UserContext.Provider>
   );
