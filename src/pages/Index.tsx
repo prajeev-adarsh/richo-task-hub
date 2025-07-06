@@ -1,6 +1,5 @@
 import React from 'react';
-import { LanguageProvider } from '@/components/LanguageContext';
-import { UserProvider, useUser } from '@/components/UserContext';
+import { useUser } from '@/components/UserContext';
 import Navigation from '@/components/Navigation';
 import RoleSelector from '@/components/RoleSelector';
 import ClientDashboard from './ClientDashboard';
@@ -51,13 +50,7 @@ const AppContent = () => {
 };
 
 const Index = () => {
-  return (
-    <UserProvider>
-      <LanguageProvider>
-        <AppContent />
-      </LanguageProvider>
-    </UserProvider>
-  );
+  return <AppContent />;
 };
 
 export default Index;
