@@ -11,6 +11,7 @@ import PostTask from "./pages/PostTask";
 import BrowseTasks from "./pages/BrowseTasks";
 import MyTasks from "./pages/MyTasks";
 import MyGigs from "./pages/MyGigs";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,7 +33,7 @@ const App = () => (
               <Route path="/my-gigs" element={<MyGigs />} />
               <Route path="/client-dashboard" element={<Index />} />
               <Route path="/doer-dashboard" element={<Index />} />
-              <Route path="/admin-dashboard" element={<Index />} />
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
