@@ -97,6 +97,8 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      console.log('Starting signup process...');
+      
       // Sign up with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: signupData.email,
@@ -106,9 +108,14 @@ const Auth = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Auth signup error:', error);
+        throw error;
+      }
 
       if (data.user) {
+        console.log('User created, creating profile...', data.user.id);
+        
         // Create user profile
         const { error: profileError } = await supabase
           .from('users')
@@ -121,8 +128,13 @@ const Auth = () => {
             language: signupData.language,
           });
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          throw profileError;
+        }
 
+        console.log('Profile created successfully');
+        
         toast({
           title: "Account created successfully!",
           description: "Please check your email to verify your account.",
@@ -134,9 +146,22 @@ const Auth = () => {
         else navigate('/');
       }
     } catch (error: any) {
+      console.error('Signup error:', error);
+      
+      let errorMessage = error.message;
+      
+      // Handle specific error types
+      if (error.message?.includes('row-level security')) {
+        errorMessage = "Unable to create account. Please try again.";
+      } else if (error.message?.includes('duplicate key')) {
+        errorMessage = "An account with this email already exists.";
+      } else if (error.message?.includes('Failed to fetch')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      }
+      
       toast({
         title: "Signup failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
