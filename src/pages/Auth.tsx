@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/components/LanguageContext';
@@ -31,6 +31,12 @@ const Auth = () => {
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
 
+  // Password reset mode state
+  const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   // Signup form state
   const [signupData, setSignupData] = useState({
     name: '',
@@ -41,6 +47,68 @@ const Auth = () => {
     role: '' as UserRole,
     language: language as UserLanguage,
   });
+
+  // Detect password reset sessions
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordResetMode(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Password mismatch",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully updated.",
+      });
+
+      // Reset form and redirect
+      setNewPassword('');
+      setConfirmPassword('');
+      setIsPasswordResetMode(false);
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: "Update failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,18 +311,57 @@ const Auth = () => {
           </Button>
         </div>
 
-        {/* Auth Tabs */}
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 rounded-2xl">
-            <TabsTrigger value="login" className="rounded-2xl">
-              <LogIn className="h-4 w-4 mr-2" />
-              Login
-            </TabsTrigger>
-            <TabsTrigger value="signup" className="rounded-2xl">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Sign Up
-            </TabsTrigger>
-          </TabsList>
+        {/* Password Reset Mode or Auth Tabs */}
+        {isPasswordResetMode ? (
+          <Card className="rounded-2xl">
+            <CardHeader>
+              <CardTitle>Set New Password</CardTitle>
+              <CardDescription>Enter your new password to complete the reset</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter your new password"
+                    required
+                    className="rounded-2xl"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                  <Input
+                    id="confirm-new-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your new password"
+                    required
+                    className="rounded-2xl"
+                  />
+                </div>
+                <Button type="submit" className="w-full rounded-2xl" disabled={isUpdatingPassword}>
+                  {isUpdatingPassword ? 'Updating password...' : 'Update Password'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 rounded-2xl">
+              <TabsTrigger value="login" className="rounded-2xl">
+                <LogIn className="h-4 w-4 mr-2" />
+                Login
+              </TabsTrigger>
+              <TabsTrigger value="signup" className="rounded-2xl">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Sign Up
+              </TabsTrigger>
+            </TabsList>
 
           {/* Login Tab */}
           <TabsContent value="login">
@@ -459,6 +566,7 @@ const Auth = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        )}
       </div>
     </div>
   );
