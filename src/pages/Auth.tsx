@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, LogIn, Globe } from 'lucide-react';
+import { UserPlus, LogIn, Globe, Mail } from 'lucide-react';
 
 type UserRole = 'client' | 'doer';
 type UserLanguage = 'en' | 'te' | 'hi';
@@ -24,6 +25,11 @@ const Auth = () => {
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+
+  // Forgot password state
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
 
   // Signup form state
   const [signupData, setSignupData] = useState({
@@ -169,6 +175,35 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsResetting(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Reset email sent",
+        description: "Check your email for password reset instructions.",
+      });
+
+      setForgotPasswordOpen(false);
+      setResetEmail('');
+    } catch (error: any) {
+      toast({
+        title: "Reset failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const languageOptions = [
     { value: 'en', label: 'English' },
     { value: 'te', label: 'తెలుగు' },
@@ -257,6 +292,52 @@ const Auth = () => {
                   <Button type="submit" className="w-full rounded-2xl" disabled={isLoading}>
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
+                  
+                  <div className="text-center">
+                    <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          type="button" 
+                          variant="link" 
+                          className="text-sm text-muted-foreground hover:text-primary"
+                        >
+                          Forgot password?
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="rounded-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center space-x-2">
+                            <Mail className="h-5 w-5" />
+                            <span>Reset Password</span>
+                          </DialogTitle>
+                          <DialogDescription>
+                            Enter your email address and we'll send you a link to reset your password.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleForgotPassword} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="reset-email">Email</Label>
+                            <Input
+                              id="reset-email"
+                              type="email"
+                              value={resetEmail}
+                              onChange={(e) => setResetEmail(e.target.value)}
+                              placeholder="Enter your email"
+                              required
+                              className="rounded-2xl"
+                            />
+                          </div>
+                          <Button 
+                            type="submit" 
+                            className="w-full rounded-2xl" 
+                            disabled={isResetting}
+                          >
+                            {isResetting ? 'Sending...' : 'Send Reset Link'}
+                          </Button>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </form>
               </CardContent>
             </Card>
