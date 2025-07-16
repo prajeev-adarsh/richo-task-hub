@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from './UserContext';
 import { useLanguage, Language } from './LanguageContext';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 const Navigation = () => {
+  const navigate = useNavigate();
   const { role, isAuthenticated, signOut } = useUser();
   const { t, language, setLanguage } = useLanguage();
 
@@ -73,7 +75,7 @@ const Navigation = () => {
                 key={item.path}
                 variant="ghost"
                 className="flex items-center space-x-2 px-3 py-2 rounded-2xl hover:bg-muted"
-                onClick={() => {/* Navigate to item.path */}}
+                onClick={() => navigate(item.path)}
               >
                 <item.icon className="h-4 w-4" />
                 <span>{item.label}</span>
@@ -126,7 +128,7 @@ const Navigation = () => {
                 variant="ghost"
                 size="sm"
                 className="flex items-center space-x-1 px-3 py-2 rounded-2xl hover:bg-muted whitespace-nowrap"
-                onClick={() => {/* Navigate to item.path */}}
+                onClick={() => navigate(item.path)}
               >
                 <item.icon className="h-4 w-4" />
                 <span className="text-sm">{item.label}</span>
