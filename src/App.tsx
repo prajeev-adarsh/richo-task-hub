@@ -12,6 +12,8 @@ import BrowseTasks from "./pages/BrowseTasks";
 import MyTasks from "./pages/MyTasks";
 import MyGigs from "./pages/MyGigs";
 import AdminDashboard from "./pages/AdminDashboard";
+import Payments from "./pages/Payments";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,8 @@ const App = () => (
               <Route path="/client-dashboard" element={<Index />} />
               <Route path="/doer-dashboard" element={<Index />} />
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/payments" element={<Payments />} />
+              <Route path="/profile" element={<Profile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
