@@ -28,7 +28,7 @@ const Navigation = () => {
     switch (role) {
       case 'client':
         return [
-          { icon: Home, label: t('home'), path: '/' },
+          { icon: Home, label: t('home'), path: '/client-dashboard' },
           { icon: PlusCircle, label: t('postTask'), path: '/post-task' },
           { icon: CheckSquare, label: t('myTasks'), path: '/my-tasks' },
           { icon: CreditCard, label: t('payments'), path: '/payments' },
@@ -36,7 +36,7 @@ const Navigation = () => {
         ];
       case 'doer':
         return [
-          { icon: Home, label: t('home'), path: '/' },
+          { icon: Home, label: t('home'), path: '/doer-dashboard' },
           { icon: Search, label: t('browseTasks'), path: '/browse-tasks' },
           { icon: Briefcase, label: t('myGigs'), path: '/my-gigs' },
           { icon: DollarSign, label: t('earnings'), path: '/earnings' },

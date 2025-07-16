@@ -11,6 +11,8 @@ import PostTask from "./pages/PostTask";
 import BrowseTasks from "./pages/BrowseTasks";
 import MyTasks from "./pages/MyTasks";
 import MyGigs from "./pages/MyGigs";
+import ClientDashboard from "./pages/ClientDashboard";
+import DoerDashboard from "./pages/DoerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Payments from "./pages/Payments";
 import Profile from "./pages/Profile";
@@ -33,8 +35,9 @@ const App = () => (
               <Route path="/browse-tasks" element={<BrowseTasks />} />
               <Route path="/my-tasks" element={<MyTasks />} />
               <Route path="/my-gigs" element={<MyGigs />} />
-              <Route path="/client-dashboard" element={<Index />} />
-              <Route path="/doer-dashboard" element={<Index />} />
+              <Route path="/client-dashboard" element={<ClientDashboard />} />
+              <Route path="/doer-dashboard" element={<DoerDashboard />} />
+              <Route path="/earnings" element={<Payments />} />
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="/payments" element={<Payments />} />
               <Route path="/profile" element={<Profile />} />
