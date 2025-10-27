@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUser } from '@/components/UserContext';
 import Navigation from '@/components/Navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,12 +6,75 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CalendarDays, Search, Filter, Download } from 'lucide-react';
+import { CalendarDays, Search, Filter, Download, CreditCard, Clock } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 const Payments = () => {
-  const { isAuthenticated, isLoading } = useUser();
+  const { isAuthenticated, isLoading, user } = useUser();
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalPaid: 0,
+    thisMonth: 0,
+    pending: 0,
+  });
 
-  if (isLoading) {
+  useEffect(() => {
+    if (user) {
+      fetchPayments();
+    }
+  }, [user]);
+
+  const fetchPayments = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch payments based on user role
+      let query = supabase
+        .from('payments')
+        .select(`
+          *,
+          task:tasks(title, category)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (user.role === 'client') {
+        query = query.eq('client_id', user.id);
+      } else if (user.role === 'doer') {
+        query = query.eq('doer_id', user.id);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      setPayments(data || []);
+
+      // Calculate stats
+      const total = data?.filter(p => p.payment_status === 'paid')
+        .reduce((sum, p) => sum + p.amount, 0) || 0;
+      
+      const thisMonth = data?.filter(p => {
+        const date = new Date(p.created_at);
+        const now = new Date();
+        return p.payment_status === 'paid' && 
+               date.getMonth() === now.getMonth() && 
+               date.getFullYear() === now.getFullYear();
+      }).reduce((sum, p) => sum + p.amount, 0) || 0;
+
+      const pending = data?.filter(p => p.payment_status === 'pending')
+        .reduce((sum, p) => sum + p.amount, 0) || 0;
+
+      setStats({ totalPaid: total, thisMonth, pending });
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -27,28 +90,6 @@ const Payments = () => {
   if (!isAuthenticated) {
     return <div>Please log in to view payments</div>;
   }
-
-  // Sample payment data - will be replaced with real data later
-  const payments = [
-    {
-      id: 1,
-      taskTitle: "Logo Design for Startup",
-      amount: 5000,
-      status: "completed",
-      date: "2024-01-15",
-      paymentMethod: "UPI",
-      transactionId: "TXN12345"
-    },
-    {
-      id: 2,
-      taskTitle: "Website Development",
-      amount: 15000,
-      status: "pending",
-      date: "2024-01-10",
-      paymentMethod: "Bank Transfer",
-      transactionId: "TXN12346"
-    }
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -98,10 +139,10 @@ const Payments = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹20,000</div>
+              <div className="text-2xl font-bold">₹{stats.totalPaid.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">All time</p>
             </CardContent>
           </Card>
@@ -112,19 +153,19 @@ const Payments = () => {
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹5,000</div>
-              <p className="text-xs text-muted-foreground">January 2024</p>
+              <div className="text-2xl font-bold">₹{stats.thisMonth.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">{format(new Date(), 'MMMM yyyy')}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₹15,000</div>
-              <p className="text-xs text-muted-foreground">1 transaction</p>
+              <div className="text-2xl font-bold">₹{stats.pending.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">{payments.filter(p => p.payment_status === 'pending').length} transaction(s)</p>
             </CardContent>
           </Card>
         </div>
@@ -136,30 +177,40 @@ const Payments = () => {
             <CardDescription>Your payment history and transaction details</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {payments.map((payment, index) => (
-                <div key={payment.id}>
-                  <div className="flex flex-col md:flex-row md:items-center justify-between space-y-2 md:space-y-0">
-                    <div className="flex-1">
-                      <h3 className="font-medium">{payment.taskTitle}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {payment.paymentMethod} • {payment.transactionId}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{payment.date}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Badge className={getStatusColor(payment.status)}>
-                        {payment.status}
-                      </Badge>
-                      <div className="text-right">
-                        <p className="font-medium">₹{payment.amount.toLocaleString()}</p>
+            {payments.length === 0 ? (
+              <div className="text-center py-8">
+                <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground">No transactions yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {payments.map((payment, index) => (
+                  <div key={payment.id}>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between space-y-2 md:space-y-0">
+                      <div className="flex-1">
+                        <h3 className="font-medium">{payment.task?.title || 'Task'}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {payment.payment_mode === 'upi_manual' ? 'UPI' : 'Razorpay'}
+                          {payment.razorpay_payment_id && ` • ${payment.razorpay_payment_id}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(payment.created_at), 'MMM dd, yyyy')}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Badge className={getStatusColor(payment.payment_status)}>
+                          {payment.payment_status}
+                        </Badge>
+                        <div className="text-right">
+                          <p className="font-medium">₹{payment.amount.toLocaleString()}</p>
+                        </div>
                       </div>
                     </div>
+                    {index < payments.length - 1 && <Separator className="mt-4" />}
                   </div>
-                  {index < payments.length - 1 && <Separator className="mt-4" />}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

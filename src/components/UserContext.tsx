@@ -43,13 +43,23 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         setSession(session);
         
         if (session?.user) {
-          // Fetch user profile data
+          // Fetch user profile data with role from user_roles table
           setTimeout(async () => {
             const { data: profile } = await supabase
               .from('users')
               .select('*')
               .eq('auth_user_id', session.user.id)
               .single();
+            
+            if (profile) {
+              // Fetch role from user_roles table using security definer function
+              const { data: roleData, error: roleError } = await supabase
+                .rpc('get_user_role', { _user_id: session.user.id });
+              
+              if (!roleError && roleData) {
+                profile.role = roleData;
+              }
+            }
             
             setUser(profile);
             setIsLoading(false);
@@ -70,7 +80,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           .select('*')
           .eq('auth_user_id', session.user.id)
           .single()
-          .then(({ data: profile }) => {
+          .then(async ({ data: profile }) => {
+            if (profile) {
+              // Fetch role from user_roles table
+              const { data: roleData, error: roleError } = await supabase
+                .rpc('get_user_role', { _user_id: session.user.id });
+              
+              if (!roleError && roleData) {
+                profile.role = roleData;
+              }
+            }
             setUser(profile);
             setIsLoading(false);
           });

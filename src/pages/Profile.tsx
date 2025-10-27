@@ -11,10 +11,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Camera, Edit, Save, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Profile = () => {
   const { isAuthenticated, isLoading, user, role } = useUser();
   const { language, setLanguage } = useLanguage();
+  const { toast } = useToast();
 
   const availableLanguages = [
     { code: 'en', name: 'English' },
@@ -46,10 +49,38 @@ const Profile = () => {
     return <div>Please log in to view your profile</div>;
   }
 
-  const handleSave = () => {
-    // TODO: Implement profile update logic
-    console.log('Saving profile:', formData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          upi_id: formData.upiId || null,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
+      });
+
+      setIsEditing(false);
+      // Refresh page to show updated data
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCancel = () => {
