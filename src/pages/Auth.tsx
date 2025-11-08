@@ -123,17 +123,17 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Fetch user profile to get role for redirect
+        // Fetch user profile to get active_role for redirect
         const { data: profile } = await supabase
           .from('users')
-          .select('role')
+          .select('active_role')
           .eq('auth_user_id', data.user.id)
           .single();
 
-        const role = profile?.role;
-        if (role === 'client') navigate('/client-dashboard');
-        else if (role === 'doer') navigate('/doer-dashboard');
-        else if (role === 'admin') navigate('/admin-dashboard');
+        const activeRole = profile?.active_role;
+        if (activeRole === 'client') navigate('/client-dashboard');
+        else if (activeRole === 'doer') navigate('/doer-dashboard');
+        else if (activeRole === 'admin') navigate('/admin-dashboard');
         else navigate('/');
       }
     } catch (error: any) {
@@ -199,6 +199,7 @@ const Auth = () => {
             email: signupData.email,
             phone: signupData.phone,
             role: signupData.role,
+            active_role: signupData.role,
             language: signupData.language,
           });
 
@@ -207,7 +208,20 @@ const Auth = () => {
           throw profileError;
         }
 
-        console.log('Profile created successfully');
+        // Add role to user_roles table
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: data.user.id,
+            role: signupData.role,
+          });
+
+        if (roleError) {
+          console.error('Role creation error:', roleError);
+          throw roleError;
+        }
+
+        console.log('Profile and role created successfully');
         
         toast({
           title: "Account created successfully!",

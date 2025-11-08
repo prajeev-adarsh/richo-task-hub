@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useUser } from '@/components/UserContext';
 import { useLanguage } from '@/components/LanguageContext';
 import Navigation from '@/components/Navigation';
+import RoleSwitcher from '@/components/RoleSwitcher';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -217,6 +218,17 @@ const Profile = () => {
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Role Switcher */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Active Role</CardTitle>
+            <CardDescription>Switch between your available roles to change your dashboard view</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RoleSwitcher />
           </CardContent>
         </Card>
 

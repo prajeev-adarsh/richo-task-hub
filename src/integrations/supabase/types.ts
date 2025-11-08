@@ -300,6 +300,7 @@ export type Database = {
       }
       users: {
         Row: {
+          active_role: Database["public"]["Enums"]["user_role"]
           auth_user_id: string
           created_at: string
           email: string
@@ -312,6 +313,7 @@ export type Database = {
           upi_id: string | null
         }
         Insert: {
+          active_role: Database["public"]["Enums"]["user_role"]
           auth_user_id: string
           created_at?: string
           email: string
@@ -324,6 +326,7 @@ export type Database = {
           upi_id?: string | null
         }
         Update: {
+          active_role?: Database["public"]["Enums"]["user_role"]
           auth_user_id?: string
           created_at?: string
           email?: string
@@ -346,11 +349,21 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_user_roles: {
+        Args: { _user_id: string }
+        Returns: {
+          role: Database["public"]["Enums"]["user_role"]
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      switch_user_role: {
+        Args: { _new_role: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
       }
     }

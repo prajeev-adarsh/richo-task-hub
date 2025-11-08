@@ -52,13 +52,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
               .single();
             
             if (profile) {
-              // Fetch role from user_roles table using security definer function
-              const { data: roleData, error: roleError } = await supabase
-                .rpc('get_user_role', { _user_id: session.user.id });
-              
-              if (!roleError && roleData) {
-                profile.role = roleData;
-              }
+              // Use active_role from the profile (already fetched from users table)
+              // active_role represents the currently selected role
+              profile.role = profile.active_role;
             }
             
             setUser(profile);
@@ -82,13 +78,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           .single()
           .then(async ({ data: profile }) => {
             if (profile) {
-              // Fetch role from user_roles table
-              const { data: roleData, error: roleError } = await supabase
-                .rpc('get_user_role', { _user_id: session.user.id });
-              
-              if (!roleError && roleData) {
-                profile.role = roleData;
-              }
+              // Use active_role from the profile
+              profile.role = profile.active_role;
             }
             setUser(profile);
             setIsLoading(false);
