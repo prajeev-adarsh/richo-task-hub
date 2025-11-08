@@ -53,8 +53,10 @@ const PostTask = () => {
   });
 
   const initializeRazorpayPayment = (taskId: string, amount: number) => {
+    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_demo';
+    
     const options = {
-      key: 'rzp_test_RAZORPAY_KEY_ID', // Will be replaced with actual key
+      key: razorpayKey,
       amount: amount * 100, // Razorpay expects amount in paise
       currency: 'INR',
       name: 'Task Payment',
