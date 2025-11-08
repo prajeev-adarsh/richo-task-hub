@@ -116,11 +116,17 @@ serve(async (req) => {
       );
     }
 
-    // Verify the requesting user is the task's client
-    if (task.client_id !== userProfile.id) {
-      console.error('User is not the task client');
+    // Verify the requesting user is the task's client OR is an admin (defense-in-depth)
+    // Check if user has admin role for defense-in-depth
+    const { data: isAdmin } = await supabase
+      .rpc('has_role', { _user_id: user.id, _role: 'admin' });
+    
+    const isAuthorized = task.client_id === userProfile.id || isAdmin === true;
+    
+    if (!isAuthorized) {
+      console.error('User is not authorized for this payment verification');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: You are not the client for this task' }),
+        JSON.stringify({ error: 'Unauthorized: You are not authorized for this task' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 403,
