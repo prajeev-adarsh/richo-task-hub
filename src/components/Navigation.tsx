@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser, UserRole } from './UserContext';
 import { useLanguage, Language } from './LanguageContext';
@@ -39,13 +39,7 @@ const Navigation = () => {
   const [availableRoles, setAvailableRoles] = useState<UserRole[]>([]);
   const [isSwitching, setIsSwitching] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchAvailableRoles();
-    }
-  }, [user]);
-
-  const fetchAvailableRoles = async () => {
+  const fetchAvailableRoles = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -57,7 +51,11 @@ const Navigation = () => {
     } catch (error) {
       console.error('Error fetching roles:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchAvailableRoles();
+  }, [fetchAvailableRoles]);
 
   const handleRoleSwitch = async (newRole: UserRole) => {
     if (newRole === role) return;
