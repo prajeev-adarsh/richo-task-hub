@@ -5,9 +5,11 @@ import RoleSelector from '@/components/RoleSelector';
 import ClientDashboard from './ClientDashboard';
 import DoerDashboard from './DoerDashboard';
 import AdminDashboard from './AdminDashboard';
+import ClientOnboarding from '@/components/onboarding/ClientOnboarding';
+import DoerOnboarding from '@/components/onboarding/DoerOnboarding';
 
 const AppContent = () => {
-  const { isAuthenticated, role, isLoading } = useUser();
+  const { isAuthenticated, role, isLoading, user } = useUser();
 
   if (isLoading) {
     return (
@@ -24,6 +26,15 @@ const AppContent = () => {
 
   if (!isAuthenticated) {
     return <RoleSelector />;
+  }
+
+  // Show onboarding for new users
+  if (user && !user.onboarding_completed) {
+    if (role === 'client') {
+      return <ClientOnboarding />;
+    } else if (role === 'doer') {
+      return <DoerOnboarding />;
+    }
   }
 
   const renderDashboard = () => {

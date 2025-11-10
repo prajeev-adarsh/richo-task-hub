@@ -14,6 +14,7 @@ interface User {
   language: 'en' | 'te' | 'hi';
   photo_url?: string;
   created_at: string;
+  onboarding_completed?: boolean;
 }
 
 interface UserContextType {

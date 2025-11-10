@@ -307,6 +307,7 @@ export type Database = {
           id: string
           language: Database["public"]["Enums"]["user_language"]
           name: string
+          onboarding_completed: boolean
           phone: string | null
           photo_url: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -320,6 +321,7 @@ export type Database = {
           id?: string
           language?: Database["public"]["Enums"]["user_language"]
           name: string
+          onboarding_completed?: boolean
           phone?: string | null
           photo_url?: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -333,6 +335,7 @@ export type Database = {
           id?: string
           language?: Database["public"]["Enums"]["user_language"]
           name?: string
+          onboarding_completed?: boolean
           phone?: string | null
           photo_url?: string | null
           role?: Database["public"]["Enums"]["user_role"]
