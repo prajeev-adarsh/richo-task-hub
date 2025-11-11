@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, User, Eye, Download, Star, FileText, CreditCard, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,6 +69,7 @@ interface Rating {
 }
 
 const MyTasks = () => {
+  const navigate = useNavigate();
   const { user } = useUser();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -630,16 +632,27 @@ const MyTasks = () => {
 
                   <Separator />
 
-                  <div className="flex gap-2">
+                  <div className="space-y-2">
                     <Button 
-                      variant="outline" 
+                      variant="default" 
                       size="sm" 
-                      className="flex-1"
-                      onClick={() => handleViewApplications(task)}
+                      className="w-full"
+                      onClick={() => navigate(`/task/${task.id}`)}
                     >
-                      <Users className="h-4 w-4 mr-1" />
-                      View Applications
+                      <Eye className="h-4 w-4 mr-1" />
+                      View Details
                     </Button>
+
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => handleViewApplications(task)}
+                      >
+                        <Users className="h-4 w-4 mr-1" />
+                        Applications
+                      </Button>
                     
                     {/* Show View Proof button for in_progress tasks with proof */}
                     {task.status === 'in_progress' && getProofForTask(task.id) && (
@@ -654,21 +667,22 @@ const MyTasks = () => {
                       </Button>
                     )}
                     
-                    {/* Show Rate Doer button for completed tasks without rating */}
-                    {task.status === 'completed' && !hasRated(task.id) && task.doer && (
-                      <Button 
-                        variant="default" 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={() => {
-                          setSelectedTask(task);
-                          setShowRatingModal(true);
-                        }}
-                      >
-                        <Star className="h-4 w-4 mr-1" />
-                        Rate Doer
-                      </Button>
-                    )}
+                      {/* Show Rate Doer button for completed tasks without rating */}
+                      {task.status === 'completed' && !hasRated(task.id) && task.doer && (
+                        <Button 
+                          variant="default" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setShowRatingModal(true);
+                          }}
+                        >
+                          <Star className="h-4 w-4 mr-1" />
+                          Rate
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

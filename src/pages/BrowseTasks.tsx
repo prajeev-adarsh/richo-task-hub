@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { MapPin, Calendar, IndianRupee, Filter, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +33,7 @@ interface TaskApplication {
 }
 
 const BrowseTasks = () => {
+  const navigate = useNavigate();
   const { user } = useUser();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -275,7 +277,12 @@ const BrowseTasks = () => {
                   </div>
 
                   <div className="flex gap-2 pt-4">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => navigate(`/task/${task.id}`)}
+                    >
                       View Details
                     </Button>
                     

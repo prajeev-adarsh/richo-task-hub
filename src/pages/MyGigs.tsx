@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Calendar, IndianRupee, Upload, FileText, CheckCircle, Clock } from 'lucide-react';
+import { Calendar, IndianRupee, Upload, FileText, CheckCircle, Clock, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -43,6 +44,7 @@ interface ProofSubmission {
 }
 
 const MyGigs = () => {
+  const navigate = useNavigate();
   const { user } = useUser();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -300,7 +302,17 @@ const MyGigs = () => {
                       </div>
                     </div>
 
-                    <div className="pt-4">
+                    <div className="space-y-2 pt-4">
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => navigate(`/task/${task.id}`)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Details
+                      </Button>
+
                       {hasProof ? (
                         <Button variant="secondary" size="sm" className="w-full" disabled>
                           <CheckCircle className="h-4 w-4 mr-2" />
@@ -308,6 +320,7 @@ const MyGigs = () => {
                         </Button>
                       ) : (
                         <Button 
+                          variant="outline"
                           size="sm" 
                           className="w-full"
                           onClick={() => openProofModal(task)}
