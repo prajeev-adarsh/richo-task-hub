@@ -15,6 +15,7 @@ interface TaskActionButtonsProps {
   onViewProof?: () => void;
   onMarkComplete?: () => void;
   onApply?: () => void;
+  onOpenChat?: () => void;
   applicantCount?: number;
   hasProof?: boolean;
 }
@@ -31,6 +32,7 @@ const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
   onViewProof,
   onMarkComplete,
   onApply,
+  onOpenChat,
   applicantCount = 0,
   hasProof = false
 }) => {
@@ -79,15 +81,15 @@ const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
             </Button>
           )}
 
-          {/* Placeholder for chat (Phase 2) */}
-          {taskStatus === 'in_progress' && (
+          {/* Chat with doer */}
+          {(taskStatus === 'in_progress' || taskStatus === 'assigned') && (
             <Button
               variant="outline"
               className="w-full justify-start"
-              disabled
+              onClick={onOpenChat}
             >
               <MessageCircle className="h-4 w-4 mr-2" />
-              Chat (Coming Soon)
+              Chat with Doer
             </Button>
           )}
         </CardContent>
@@ -124,14 +126,14 @@ const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
               </Button>
             )}
 
-            {/* Placeholder for chat */}
+            {/* Chat with client */}
             <Button
               variant="outline"
               className="w-full justify-start"
-              disabled
+              onClick={onOpenChat}
             >
               <MessageCircle className="h-4 w-4 mr-2" />
-              Chat with Client (Coming Soon)
+              Chat with Client
             </Button>
           </CardContent>
         </Card>

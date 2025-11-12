@@ -8,6 +8,7 @@ import { UserProvider } from '@/components/UserContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import Index from "./pages/Index";
 import TaskDetails from "./pages/TaskDetails";
+import ChatRoom from "./pages/ChatRoom";
 import Auth from "./pages/Auth";
 import PostTask from "./pages/PostTask";
 import BrowseTasks from "./pages/BrowseTasks";
@@ -34,6 +35,11 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/task/:id" element={<TaskDetails />} />
+              <Route path="/chat/:taskId" element={
+                <ProtectedRoute>
+                  <ChatRoom />
+                </ProtectedRoute>
+              } />
               <Route path="/post-task" element={
                 <ProtectedRoute allowedRoles={['client']}>
                   <PostTask />

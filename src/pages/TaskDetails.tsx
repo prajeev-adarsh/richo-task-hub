@@ -351,6 +351,7 @@ const TaskDetails = () => {
               applicationStatus={application?.status}
               onViewApplicants={() => setShowApplicantsModal(true)}
               onApply={handleApply}
+              onOpenChat={() => navigate(`/chat/${task.id}`)}
               applicantCount={applicantCount}
               hasProof={hasProof}
             />
