@@ -105,6 +105,47 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          payload: Json | null
+          read: boolean
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          payload?: Json | null
+          read?: boolean
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          payload?: Json | null
+          read?: boolean
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -481,6 +522,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_notification: {
+        Args: {
+          p_message: string
+          p_payload?: Json
+          p_title: string
+          p_type: Database["public"]["Enums"]["notification_type"]
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -505,6 +556,18 @@ export type Database = {
     }
     Enums: {
       application_status: "pending" | "accepted" | "rejected"
+      notification_type:
+        | "application_received"
+        | "application_accepted"
+        | "application_rejected"
+        | "task_assigned"
+        | "proof_submitted"
+        | "proof_accepted"
+        | "proof_rejected"
+        | "payment_released"
+        | "rating_received"
+        | "new_message"
+        | "new_comment"
       proof_status: "pending" | "accepted" | "rejected"
       task_category: "student" | "skilled" | "ai" | "custom"
       task_status:
@@ -643,6 +706,19 @@ export const Constants = {
   public: {
     Enums: {
       application_status: ["pending", "accepted", "rejected"],
+      notification_type: [
+        "application_received",
+        "application_accepted",
+        "application_rejected",
+        "task_assigned",
+        "proof_submitted",
+        "proof_accepted",
+        "proof_rejected",
+        "payment_released",
+        "rating_received",
+        "new_message",
+        "new_comment",
+      ],
       proof_status: ["pending", "accepted", "rejected"],
       task_category: ["student", "skilled", "ai", "custom"],
       task_status: [
