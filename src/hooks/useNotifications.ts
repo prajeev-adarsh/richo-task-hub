@@ -17,7 +17,43 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(false);
   const { user } = useUser();
+
+  // Request browser notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then((permission) => {
+        setPushEnabled(permission === 'granted');
+      });
+    } else if ('Notification' in window) {
+      setPushEnabled(Notification.permission === 'granted');
+    }
+  }, []);
+
+  // Play notification sound
+  const playNotificationSound = () => {
+    if (soundEnabled) {
+      const audio = new Audio('/notification-sound.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(() => {
+        // Ignore errors (e.g., user hasn't interacted with page yet)
+      });
+    }
+  };
+
+  // Show browser push notification
+  const showPushNotification = (notification: Notification) => {
+    if (pushEnabled && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification(notification.title, {
+        body: notification.message,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: notification.id,
+      });
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -36,8 +72,11 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
+          const newNotification = payload.new as Notification;
+          setNotifications((prev) => [newNotification, ...prev]);
           setUnreadCount((prev) => prev + 1);
+          playNotificationSound();
+          showPushNotification(newNotification);
         }
       )
       .on(
@@ -129,5 +168,8 @@ export const useNotifications = () => {
     markAsRead,
     markAllAsRead,
     refetch: fetchNotifications,
+    soundEnabled,
+    setSoundEnabled,
+    pushEnabled,
   };
 };
