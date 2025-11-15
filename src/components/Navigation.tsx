@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { NotificationBell } from './notifications/NotificationBell';
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -235,6 +236,8 @@ const Navigation = () => {
               <Globe className="h-4 w-4" />
               <span className="uppercase">{language}</span>
             </Button>
+
+            <NotificationBell />
 
             <Button 
               variant="outline" 
