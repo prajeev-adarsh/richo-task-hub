@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { Users, Mail, Phone, CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +53,7 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
       if (error) throw error;
       setApplicants(data || []);
     } catch (error) {
-      console.error('Error fetching applicants:', error);
+      logger.error('Error fetching applicants:', error);
       toast({
         title: "Error",
         description: "Failed to load applicants",
@@ -102,7 +103,7 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
       if (onAssign) onAssign();
       fetchApplicants();
     } catch (error) {
-      console.error('Error accepting application:', error);
+      logger.error('Error accepting application:', error);
       toast({
         title: "Error",
         description: "Failed to assign task",
@@ -130,7 +131,7 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
 
       fetchApplicants();
     } catch (error) {
-      console.error('Error rejecting application:', error);
+      logger.error('Error rejecting application:', error);
       toast({
         title: "Error",
         description: "Failed to reject application",

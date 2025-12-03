@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -82,7 +83,7 @@ const PostTask = () => {
 
           navigate('/my-tasks');
         } catch (error) {
-          console.error('Payment verification failed:', error);
+          logger.error('Payment verification failed:', error);
           toast({
             title: "Payment Error",
             description: "Payment verification failed. Please contact support.",
@@ -140,7 +141,7 @@ const PostTask = () => {
         navigate('/my-tasks');
       }
     } catch (error) {
-      console.error('Error posting task:', error);
+      logger.error('Error posting task:', error);
       toast({
         title: "Error",
         description: "Failed to post task. Please try again.",

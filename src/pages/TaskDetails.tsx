@@ -5,6 +5,7 @@ import { ArrowLeft, MapPin, Calendar, IndianRupee, User, FileText, CheckCircle, 
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -115,7 +116,7 @@ const TaskDetails = () => {
         setApplication(appData);
       }
     } catch (error) {
-      console.error('Error fetching task:', error);
+      logger.error('Error fetching task:', error);
       toast({
         title: "Error",
         description: "Failed to load task details",
@@ -147,7 +148,7 @@ const TaskDetails = () => {
 
       fetchTaskDetails();
     } catch (error) {
-      console.error('Error applying:', error);
+      logger.error('Error applying:', error);
       toast({
         title: "Error",
         description: "Failed to submit application",

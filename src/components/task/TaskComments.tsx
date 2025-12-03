@@ -4,6 +4,7 @@ import { MessageSquare, Send, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,7 +58,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId }) => {
       if (error) throw error;
       setComments(data || []);
     } catch (error) {
-      console.error('Error fetching comments:', error);
+      logger.error('Error fetching comments:', error);
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId }) => {
 
       setNewComment('');
     } catch (error) {
-      console.error('Error posting comment:', error);
+      logger.error('Error posting comment:', error);
       toast({
         title: "Error",
         description: "Failed to post comment",
@@ -137,7 +138,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId }) => {
       setEditContent('');
       fetchComments();
     } catch (error) {
-      console.error('Error updating comment:', error);
+      logger.error('Error updating comment:', error);
       toast({
         title: "Error",
         description: "Failed to update comment",
@@ -161,7 +162,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId }) => {
 
       fetchComments();
     } catch (error) {
-      console.error('Error deleting comment:', error);
+      logger.error('Error deleting comment:', error);
       toast({
         title: "Error",
         description: "Failed to delete comment",

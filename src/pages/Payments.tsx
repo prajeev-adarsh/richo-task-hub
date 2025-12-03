@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { CalendarDays, Search, Filter, Download, CreditCard, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { logger } from '@/lib/logger';
 
 const Payments = () => {
   const { isAuthenticated, isLoading, user } = useUser();
@@ -68,7 +69,7 @@ const Payments = () => {
 
       setStats({ totalPaid: total, thisMonth, pending });
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      logger.error('Error fetching payments:', error);
     } finally {
       setLoading(false);
     }

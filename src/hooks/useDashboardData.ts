@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
+import { logger } from '@/lib/logger';
 
 interface DashboardStats {
   activeTasks: number;
@@ -118,7 +119,7 @@ export const useDashboardData = () => {
       }
 
     } catch (err: any) {
-      console.error('Error fetching dashboard data:', err);
+      logger.error('Error fetching dashboard data:', err);
       setError(err.message);
     } finally {
       setIsLoading(false);

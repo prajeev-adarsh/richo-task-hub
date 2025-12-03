@@ -5,6 +5,7 @@ import { Calendar, IndianRupee, Upload, FileText, CheckCircle, Clock, Eye } from
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -83,7 +84,7 @@ const MyGigs = () => {
       if (error) throw error;
       setTasks(data || []);
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      logger.error('Error fetching tasks:', error);
       toast({
         title: "Error",
         description: "Failed to load your gigs",
@@ -106,7 +107,7 @@ const MyGigs = () => {
       if (error) throw error;
       setProofSubmissions(data || []);
     } catch (error) {
-      console.error('Error fetching proof submissions:', error);
+      logger.error('Error fetching proof submissions:', error);
     }
   };
 
@@ -209,7 +210,7 @@ const MyGigs = () => {
       // Refresh proof submissions
       fetchProofSubmissions();
     } catch (error) {
-      console.error('Error submitting proof:', error);
+      logger.error('Error submitting proof:', error);
       toast({
         title: "Error",
         description: "Failed to submit proof. Please try again.",

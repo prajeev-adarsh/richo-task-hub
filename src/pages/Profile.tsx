@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Camera, Edit, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 const Profile = () => {
   const { isAuthenticated, isLoading, user, role } = useUser();
@@ -75,7 +76,7 @@ const Profile = () => {
       // Refresh page to show updated data
       window.location.reload();
     } catch (error) {
-      console.error('Error updating profile:', error);
+      logger.error('Error updating profile:', error);
       toast({
         title: "Error",
         description: "Failed to update profile",
