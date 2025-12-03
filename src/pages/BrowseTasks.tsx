@@ -5,6 +5,7 @@ import { MapPin, Calendar, IndianRupee, Filter, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -72,7 +73,7 @@ const BrowseTasks = () => {
       if (error) throw error;
       setTasks(data || []);
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      logger.error('Error fetching tasks:', error);
       toast({
         title: "Error",
         description: "Failed to load tasks",
@@ -95,7 +96,7 @@ const BrowseTasks = () => {
       if (error) throw error;
       setApplications(data || []);
     } catch (error) {
-      console.error('Error fetching applications:', error);
+      logger.error('Error fetching applications:', error);
     }
   };
 
@@ -134,7 +135,7 @@ const BrowseTasks = () => {
       setApplications(prev => [...prev, { task_id: selectedTask.id }]);
       setShowApplyModal(false);
     } catch (error) {
-      console.error('Error applying to task:', error);
+      logger.error('Error applying to task:', error);
       toast({
         title: "Error",
         description: "Failed to submit application",

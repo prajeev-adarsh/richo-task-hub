@@ -5,6 +5,7 @@ import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, User, Eye, D
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -124,7 +125,7 @@ const MyTasks = () => {
       if (error) throw error;
       setTasks(data || []);
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      logger.error('Error fetching tasks:', error);
       toast({
         title: "Error",
         description: "Failed to load your tasks",
@@ -149,7 +150,7 @@ const MyTasks = () => {
       if (error) throw error;
       setApplications(data || []);
     } catch (error) {
-      console.error('Error fetching applications:', error);
+      logger.error('Error fetching applications:', error);
       toast({
         title: "Error",
         description: "Failed to load applications",
@@ -170,7 +171,7 @@ const MyTasks = () => {
       if (error) throw error;
       setProofSubmissions(data || []);
     } catch (error) {
-      console.error('Error fetching proof submissions:', error);
+      logger.error('Error fetching proof submissions:', error);
     }
   };
 
@@ -186,7 +187,7 @@ const MyTasks = () => {
       if (error) throw error;
       setRatings(data || []);
     } catch (error) {
-      console.error('Error fetching ratings:', error);
+      logger.error('Error fetching ratings:', error);
     }
   };
 
@@ -251,7 +252,7 @@ const MyTasks = () => {
         }, 500);
       }
     } catch (error) {
-      console.error('Error accepting proof:', error);
+      logger.error('Error accepting proof:', error);
       toast({
         title: "Error",
         description: "Failed to accept proof",
@@ -283,7 +284,7 @@ const MyTasks = () => {
       fetchProofSubmissions();
       setShowProofModal(false);
     } catch (error) {
-      console.error('Error rejecting proof:', error);
+      logger.error('Error rejecting proof:', error);
       toast({
         title: "Error",
         description: "Failed to reject proof",
@@ -323,7 +324,7 @@ const MyTasks = () => {
       setReview('');
       setSelectedTask(null);
     } catch (error) {
-      console.error('Error submitting rating:', error);
+      logger.error('Error submitting rating:', error);
       toast({
         title: "Error",
         description: "Failed to submit rating",
@@ -377,7 +378,7 @@ const MyTasks = () => {
       setShowApplicationsModal(false);
       setSelectedTask(null);
     } catch (error) {
-      console.error('Error assigning task:', error);
+      logger.error('Error assigning task:', error);
       toast({
         title: "Error",
         description: "Failed to assign task",
@@ -407,7 +408,7 @@ const MyTasks = () => {
         fetchApplications(selectedTask.id);
       }
     } catch (error) {
-      console.error('Error rejecting application:', error);
+      logger.error('Error rejecting application:', error);
       toast({
         title: "Error",
         description: "Failed to reject application",
@@ -498,7 +499,7 @@ const MyTasks = () => {
       setPaymentFile(null);
       setSelectedTask(null);
     } catch (error) {
-      console.error('Error marking payment as paid:', error);
+      logger.error('Error marking payment as paid:', error);
       toast({
         title: "Error",
         description: "Failed to mark payment as paid",

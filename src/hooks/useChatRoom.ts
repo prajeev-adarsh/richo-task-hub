@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 export interface Message {
   id: string;
@@ -76,7 +77,7 @@ export const useChatRoom = (taskId: string) => {
           throw fetchError;
         }
       } catch (error: any) {
-        console.error('Error initializing chat room:', error);
+        logger.error('Error initializing chat room:', error);
         toast({
           title: 'Error',
           description: 'Failed to load chat room',
@@ -105,7 +106,7 @@ export const useChatRoom = (taskId: string) => {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('Error fetching messages:', error);
+        logger.error('Error fetching messages:', error);
         return;
       }
 
@@ -187,7 +188,7 @@ export const useChatRoom = (taskId: string) => {
 
       if (error) throw error;
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message:', error);
       toast({
         title: 'Error',
         description: 'Failed to send message',
@@ -217,7 +218,7 @@ export const useChatRoom = (taskId: string) => {
 
       return urlData.publicUrl;
     } catch (error: any) {
-      console.error('Error uploading attachment:', error);
+      logger.error('Error uploading attachment:', error);
       toast({
         title: 'Error',
         description: 'Failed to upload file',

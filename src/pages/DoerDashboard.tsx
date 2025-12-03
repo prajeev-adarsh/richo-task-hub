@@ -3,6 +3,7 @@ import { useLanguage } from '@/components/LanguageContext';
 import { useUser } from '@/components/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, Briefcase, DollarSign, Star, TrendingUp } from 'lucide-react';
@@ -111,7 +112,7 @@ const DoerDashboard = () => {
         setAvailableTasks(availableTasksData || []);
         setMyGigs(activeGigsData || []);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        logger.error('Error fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }

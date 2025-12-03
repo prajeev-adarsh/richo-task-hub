@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, LogIn, Globe, Mail } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 type UserRole = 'client' | 'doer';
 type UserLanguage = 'en' | 'te' | 'hi';
@@ -171,7 +172,7 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      console.log('Starting signup process...');
+      logger.info('Starting signup process...');
       
       // Sign up with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
@@ -183,12 +184,12 @@ const Auth = () => {
       });
 
       if (error) {
-        console.error('Auth signup error:', error);
+        logger.error('Auth signup error:', error);
         throw error;
       }
 
       if (data.user) {
-        console.log('User created, creating profile...', data.user.id);
+        logger.info('User created, creating profile...', data.user.id);
         
         // Create user profile
         const { error: profileError } = await supabase
@@ -204,7 +205,7 @@ const Auth = () => {
           });
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
+          logger.error('Profile creation error:', profileError);
           throw profileError;
         }
 
@@ -217,11 +218,11 @@ const Auth = () => {
           });
 
         if (roleError) {
-          console.error('Role creation error:', roleError);
+          logger.error('Role creation error:', roleError);
           throw roleError;
         }
 
-        console.log('Profile and role created successfully');
+        logger.info('Profile and role created successfully');
         
         toast({
           title: "Account created successfully!",
@@ -234,7 +235,7 @@ const Auth = () => {
         else navigate('/');
       }
     } catch (error: any) {
-      console.error('Signup error:', error);
+      logger.error('Signup error:', error);
       
       let errorMessage = error.message;
       
