@@ -61,7 +61,6 @@ interface RevenueData {
   totalPaidTasks: number;
   totalRevenue: number;
   upiPayments: number;
-  razorpayPayments: number;
 }
 
 const AdminDashboard = () => {
@@ -78,7 +77,6 @@ const AdminDashboard = () => {
     totalPaidTasks: 0,
     totalRevenue: 0,
     upiPayments: 0,
-    razorpayPayments: 0,
   });
   
   // Loading states
@@ -272,14 +270,12 @@ const AdminDashboard = () => {
       const paidPayments = paymentsData?.filter(p => p.payment_status === 'paid') || [];
       const totalRevenue = paidPayments.reduce((sum, payment) => sum + payment.amount, 0);
       const upiPayments = paidPayments.filter(p => p.payment_mode === 'upi_manual').length;
-      const razorpayPayments = paidPayments.filter(p => p.payment_mode === 'razorpay').length;
 
       setRevenueData({
         totalTasks: totalTasks || 0,
         totalPaidTasks: paidPayments.length,
         totalRevenue,
         upiPayments,
-        razorpayPayments,
       });
     } catch (error) {
       console.error('Error fetching revenue data:', error);
@@ -609,7 +605,6 @@ const AdminDashboard = () => {
                       <SelectContent>
                         <SelectItem value="all">All Modes</SelectItem>
                         <SelectItem value="upi_manual">UPI Manual</SelectItem>
-                        <SelectItem value="razorpay">Razorpay</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -655,9 +650,7 @@ const AdminDashboard = () => {
                             <TableCell className="truncate max-w-xs">{payment.client_email}</TableCell>
                             <TableCell className="truncate max-w-xs">{payment.doer_email || 'N/A'}</TableCell>
                             <TableCell>
-                              <Badge variant="outline">
-                                {payment.payment_mode === 'upi_manual' ? 'UPI' : 'Razorpay'}
-                              </Badge>
+                              <Badge variant="outline">UPI</Badge>
                             </TableCell>
                             <TableCell>
                               <Badge variant={payment.payment_status === 'paid' ? 'default' : 'secondary'}>
@@ -721,12 +714,8 @@ const AdminDashboard = () => {
                 <CardContent>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm">UPI:</span>
+                      <span className="text-sm">UPI Payments:</span>
                       <span className="text-sm font-medium">{revenueData.upiPayments}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Razorpay:</span>
-                      <span className="text-sm font-medium">{revenueData.razorpayPayments}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -746,10 +735,6 @@ const AdminDashboard = () => {
                         <div className="flex items-center justify-between">
                           <span>UPI Manual</span>
                           <Badge variant="outline">{revenueData.upiPayments} payments</Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Razorpay</span>
-                          <Badge variant="outline">{revenueData.razorpayPayments} payments</Badge>
                         </div>
                       </div>
                     </div>

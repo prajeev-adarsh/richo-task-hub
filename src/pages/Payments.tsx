@@ -191,8 +191,7 @@ const Payments = () => {
                       <div className="flex-1">
                         <h3 className="font-medium">{payment.task?.title || 'Task'}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {payment.payment_mode === 'upi_manual' ? 'UPI' : 'Razorpay'}
-                          {payment.razorpay_payment_id && ` • ${payment.razorpay_payment_id}`}
+                          UPI Payment
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {format(new Date(payment.created_at), 'MMM dd, yyyy')}
