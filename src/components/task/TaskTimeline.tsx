@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { Clock, CheckCircle, FileText, UserPlus, Calendar, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { logger } from '@/lib/logger';
 
 interface TimelineEvent {
   id: string;
@@ -132,7 +133,7 @@ const TaskTimeline: React.FC<TaskTimelineProps> = ({ taskId, taskCreatedAt, task
 
       setEvents(timeline);
     } catch (error) {
-      console.error('Error fetching timeline:', error);
+      logger.error('Error fetching timeline:', error);
     } finally {
       setLoading(false);
     }

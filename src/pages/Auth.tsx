@@ -13,6 +13,29 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, LogIn, Globe, Mail } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+
+// Validation schemas
+const signupSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name must be less than 100 characters'),
+  email: z.string().trim().email('Invalid email format').max(255, 'Email must be less than 255 characters'),
+  phone: z.string().regex(/^[0-9]{10}$/, 'Phone must be exactly 10 digits').optional().or(z.literal('')),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+  confirmPassword: z.string(),
+  role: z.enum(['client', 'doer'], { required_error: 'Please select your role' }),
+  language: z.enum(['en', 'te', 'hi']),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+const loginSchema = z.object({
+  email: z.string().trim().email('Invalid email format'),
+  password: z.string().min(1, 'Password is required'),
+});
 
 type UserRole = 'client' | 'doer';
 type UserLanguage = 'en' | 'te' | 'hi';
@@ -113,6 +136,18 @@ const Auth = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate login data
+    const loginValidation = loginSchema.safeParse({ email: loginEmail, password: loginPassword });
+    if (!loginValidation.success) {
+      toast({
+        title: "Validation Error",
+        description: loginValidation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -151,19 +186,12 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (signupData.password !== signupData.confirmPassword) {
+    // Validate signup data using Zod
+    const validation = signupSchema.safeParse(signupData);
+    if (!validation.success) {
       toast({
-        title: "Password mismatch",
-        description: "Passwords do not match",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!signupData.role) {
-      toast({
-        title: "Role required",
-        description: "Please select your role",
+        title: "Validation Error",
+        description: validation.error.errors[0].message,
         variant: "destructive",
       });
       return;
@@ -176,7 +204,7 @@ const Auth = () => {
       
       // Sign up with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
-        email: signupData.email,
+        email: signupData.email.trim(),
         password: signupData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
@@ -191,14 +219,14 @@ const Auth = () => {
       if (data.user) {
         logger.info('User created, creating profile...', data.user.id);
         
-        // Create user profile
+        // Create user profile with trimmed and validated data
         const { error: profileError } = await supabase
           .from('users')
           .insert({
             auth_user_id: data.user.id,
-            name: signupData.name,
-            email: signupData.email,
-            phone: signupData.phone,
+            name: signupData.name.trim(),
+            email: signupData.email.trim(),
+            phone: signupData.phone?.trim() || null,
             role: signupData.role,
             active_role: signupData.role,
             language: signupData.language,

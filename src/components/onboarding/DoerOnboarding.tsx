@@ -6,6 +6,7 @@ import { CheckCircle2, Search, Briefcase, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/components/UserContext';
+import { logger } from '@/lib/logger';
 
 const DoerOnboarding = () => {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ const DoerOnboarding = () => {
 
       navigate('/browse-tasks');
     } catch (error) {
-      console.error('Error completing onboarding:', error);
+      logger.error('Error completing onboarding:', error);
       toast({
         title: 'Error',
         description: 'Failed to complete onboarding',
@@ -66,7 +67,7 @@ const DoerOnboarding = () => {
       if (error) throw error;
       navigate('/doer-dashboard');
     } catch (error) {
-      console.error('Error skipping onboarding:', error);
+      logger.error('Error skipping onboarding:', error);
     }
   };
 

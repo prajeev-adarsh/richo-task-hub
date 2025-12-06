@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UserRole } from '@/components/UserContext';
 import { Briefcase, UserCircle, Shield, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { logger } from '@/lib/logger';
 
 const RoleSwitcher = () => {
   const { user, role } = useUser();
@@ -33,7 +34,7 @@ const RoleSwitcher = () => {
 
       setAvailableRoles(data?.map((r: any) => r.role) || []);
     } catch (error) {
-      console.error('Error fetching roles:', error);
+      logger.error('Error fetching roles:', error);
       toast({
         title: "Error",
         description: "Failed to fetch available roles",
@@ -78,7 +79,7 @@ const RoleSwitcher = () => {
         window.location.reload();
       }, 500);
     } catch (error: any) {
-      console.error('Error switching role:', error);
+      logger.error('Error switching role:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to switch role",

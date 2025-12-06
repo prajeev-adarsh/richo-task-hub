@@ -3,6 +3,7 @@ import { Send, Paperclip, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 interface MessageInputProps {
   onSend: (content: string, attachments?: string[]) => Promise<void>;
@@ -25,7 +26,7 @@ export const MessageInput = ({ onSend, onUpload, disabled }: MessageInputProps) 
       setMessage('');
       setAttachments([]);
     } catch (error) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message:', error);
     }
   };
 
