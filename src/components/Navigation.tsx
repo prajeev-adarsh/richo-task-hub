@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useUser, UserRole } from './UserContext';
 import { useLanguage, Language } from './LanguageContext';
 import { Button } from '@/components/ui/button';
+import { logger } from '@/lib/logger';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,7 +51,7 @@ const Navigation = () => {
       if (error) throw error;
       setAvailableRoles(data?.map((r: any) => r.role) || []);
     } catch (error) {
-      console.error('Error fetching roles:', error);
+      logger.error('Error fetching roles:', error);
     }
   }, [user]);
 
@@ -92,7 +93,7 @@ const Navigation = () => {
         window.location.reload();
       }, 500);
     } catch (error: any) {
-      console.error('Error switching role:', error);
+      logger.error('Error switching role:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to switch role',

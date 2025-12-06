@@ -6,6 +6,7 @@ import { CheckCircle2, PlusCircle, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/components/UserContext';
+import { logger } from '@/lib/logger';
 
 const ClientOnboarding = () => {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ const ClientOnboarding = () => {
 
       navigate('/post-task');
     } catch (error) {
-      console.error('Error completing onboarding:', error);
+      logger.error('Error completing onboarding:', error);
       toast({
         title: 'Error',
         description: 'Failed to complete onboarding',
@@ -66,7 +67,7 @@ const ClientOnboarding = () => {
       if (error) throw error;
       navigate('/client-dashboard');
     } catch (error) {
-      console.error('Error skipping onboarding:', error);
+      logger.error('Error skipping onboarding:', error);
     }
   };
 

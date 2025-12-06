@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { logger } from '@/lib/logger';
 
 interface User {
   id: string;
@@ -141,7 +142,7 @@ const AdminDashboard = () => {
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      logger.error('Error fetching users:', error);
       toast({
         title: "Error",
         description: "Failed to load users",
@@ -174,7 +175,7 @@ const AdminDashboard = () => {
       
       setTasks(formattedTasks);
     } catch (error) {
-      console.error('Error fetching tasks:', error);
+      logger.error('Error fetching tasks:', error);
       toast({
         title: "Error",
         description: "Failed to load tasks",
@@ -208,7 +209,7 @@ const AdminDashboard = () => {
       
       setPayments(formattedPayments);
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      logger.error('Error fetching payments:', error);
       toast({
         title: "Error",
         description: "Failed to load payments",
@@ -242,7 +243,7 @@ const AdminDashboard = () => {
       
       setRatings(formattedRatings);
     } catch (error) {
-      console.error('Error fetching ratings:', error);
+      logger.error('Error fetching ratings:', error);
       toast({
         title: "Error",
         description: "Failed to load ratings",
@@ -278,7 +279,7 @@ const AdminDashboard = () => {
         upiPayments,
       });
     } catch (error) {
-      console.error('Error fetching revenue data:', error);
+      logger.error('Error fetching revenue data:', error);
     }
   };
 
@@ -303,7 +304,7 @@ const AdminDashboard = () => {
       setSelectedUserId(null);
       setSelectedUserName('');
     } catch (error) {
-      console.error('Error deleting user:', error);
+      logger.error('Error deleting user:', error);
       toast({
         title: "Error",
         description: "Failed to delete user",
