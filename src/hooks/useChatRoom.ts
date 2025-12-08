@@ -127,9 +127,9 @@ export const useChatRoom = (taskId: string) => {
           filter: `room_id=eq.${room.id}`,
         },
         async (payload) => {
-          // Fetch sender details
+          // Fetch sender details from public_profiles view (only safe fields)
           const { data: sender } = await supabase
-            .from('users')
+            .from('public_profiles')
             .select('id, name, photo_url')
             .eq('id', payload.new.sender_id)
             .single();

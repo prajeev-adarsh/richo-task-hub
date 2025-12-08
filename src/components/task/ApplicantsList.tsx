@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Users, Mail, Phone, CheckCircle, XCircle } from 'lucide-react';
+import { Users, CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -19,8 +19,7 @@ interface Applicant {
   doer: {
     id: string;
     name: string;
-    email: string;
-    phone: string | null;
+    photo_url: string | null;
   };
 }
 
@@ -41,11 +40,12 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
 
   const fetchApplicants = async () => {
     try {
+      // Only fetch non-sensitive user fields (no email, phone, upi_id)
       const { data, error } = await supabase
         .from('task_applications')
         .select(`
           *,
-          doer:users!task_applications_doer_id_fkey(id, name, email, phone)
+          doer:users!task_applications_doer_id_fkey(id, name, photo_url)
         `)
         .eq('task_id', taskId)
         .order('applied_at', { ascending: false });
@@ -196,16 +196,6 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
                   <div className="flex items-start justify-between">
                     <div>
                       <h4 className="font-medium">{applicant.doer.name}</h4>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Mail className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">{applicant.doer.email}</span>
-                      </div>
-                      {applicant.doer.phone && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">{applicant.doer.phone}</span>
-                        </div>
-                      )}
                     </div>
                     {getStatusBadge(applicant.status)}
                   </div>
