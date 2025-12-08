@@ -34,12 +34,12 @@ interface Task {
   client: {
     id: string;
     name: string;
-    email: string;
+    photo_url: string | null;
   };
   doer?: {
     id: string;
     name: string;
-    email: string;
+    photo_url: string | null;
   };
 }
 
@@ -73,13 +73,13 @@ const TaskDetails = () => {
     if (!id) return;
 
     try {
-      // Fetch task with related data
+      // Fetch task with related data (only fetch non-sensitive user fields)
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
         .select(`
           *,
-          client:users!tasks_client_id_fkey(id, name, email),
-          doer:users!tasks_doer_id_fkey(id, name, email)
+          client:users!tasks_client_id_fkey(id, name, photo_url),
+          doer:users!tasks_doer_id_fkey(id, name, photo_url)
         `)
         .eq('id', id)
         .single();
