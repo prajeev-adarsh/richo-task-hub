@@ -155,7 +155,6 @@ export type Database = {
           id: string
           payment_mode: string | null
           payment_status: string
-          razorpay_payment_id: string | null
           task_id: string
           uploaded_proof: string | null
         }
@@ -167,7 +166,6 @@ export type Database = {
           id?: string
           payment_mode?: string | null
           payment_status?: string
-          razorpay_payment_id?: string | null
           task_id: string
           uploaded_proof?: string | null
         }
@@ -179,7 +177,6 @@ export type Database = {
           id?: string
           payment_mode?: string | null
           payment_status?: string
-          razorpay_payment_id?: string | null
           task_id?: string
           uploaded_proof?: string | null
         }
