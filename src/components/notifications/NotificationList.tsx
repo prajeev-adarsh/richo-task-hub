@@ -39,7 +39,7 @@ const getCategoryInfo = (category: NotificationCategory) => {
 };
 
 const categorizeNotification = (type: string): NotificationCategory => {
-  if (type.includes('task') || type.includes('application') || type.includes('proof')) {
+  if (type.includes('task') || type.includes('application') || type.includes('proof') || type === 'new_task_posted') {
     return 'tasks';
   }
   if (type.includes('payment')) {
