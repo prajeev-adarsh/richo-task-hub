@@ -127,16 +127,19 @@ export const useChatRoom = (taskId: string) => {
           filter: `room_id=eq.${room.id}`,
         },
         async (payload) => {
-          // Fetch sender details from public_profiles view (only safe fields)
-          const { data: sender } = await supabase
-            .from('public_profiles')
-            .select('id, name, photo_url')
-            .eq('id', payload.new.sender_id)
-            .single();
+          // Fetch sender details using RPC function (only safe fields)
+          const { data: senderData } = await supabase
+            .rpc('get_public_profile', { _user_id: payload.new.sender_id });
+
+          const sender = senderData?.[0] || null;
 
           const newMessage = {
             ...payload.new,
-            sender,
+            sender: sender ? {
+              id: sender.id,
+              name: sender.name,
+              photo_url: sender.photo_url
+            } : null,
           } as Message;
 
           setMessages((prev) => [...prev, newMessage]);

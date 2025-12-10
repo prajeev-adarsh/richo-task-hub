@@ -41,21 +41,7 @@ export type Database = {
             foreignKeyName: "chat_rooms_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_rooms_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "chat_rooms_doer_id_fkey"
-            columns: ["doer_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -114,13 +100,6 @@ export type Database = {
             foreignKeyName: "messages_sender_id_fkey"
             columns: ["sender_id"]
             isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -158,13 +137,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
@@ -213,21 +185,7 @@ export type Database = {
             foreignKeyName: "fk_payments_client_id"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_payments_client_id"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_payments_doer_id"
-            columns: ["doer_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -279,13 +237,6 @@ export type Database = {
             foreignKeyName: "proof_submissions_doer_id_fkey"
             columns: ["doer_id"]
             isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proof_submissions_doer_id_fkey"
-            columns: ["doer_id"]
-            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -331,13 +282,6 @@ export type Database = {
             foreignKeyName: "ratings_from_user_fkey"
             columns: ["from_user"]
             isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ratings_from_user_fkey"
-            columns: ["from_user"]
-            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -346,13 +290,6 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ratings_to_user_fkey"
-            columns: ["to_user"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -387,13 +324,6 @@ export type Database = {
           task_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "task_applications_doer_id_fkey"
-            columns: ["doer_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "task_applications_doer_id_fkey"
             columns: ["doer_id"]
@@ -441,13 +371,6 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -513,21 +436,7 @@ export type Database = {
             foreignKeyName: "tasks_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_doer_id_fkey"
-            columns: ["doer_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -607,27 +516,7 @@ export type Database = {
       }
     }
     Views: {
-      public_profiles: {
-        Row: {
-          active_role: Database["public"]["Enums"]["user_role"] | null
-          id: string | null
-          name: string | null
-          photo_url: string | null
-        }
-        Insert: {
-          active_role?: Database["public"]["Enums"]["user_role"] | null
-          id?: string | null
-          name?: string | null
-          photo_url?: string | null
-        }
-        Update: {
-          active_role?: Database["public"]["Enums"]["user_role"] | null
-          id?: string | null
-          name?: string | null
-          photo_url?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       create_notification: {
@@ -639,6 +528,24 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      get_public_profile: {
+        Args: { _user_id: string }
+        Returns: {
+          active_role: Database["public"]["Enums"]["user_role"]
+          id: string
+          name: string
+          photo_url: string
+        }[]
+      }
+      get_public_profiles: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          active_role: Database["public"]["Enums"]["user_role"]
+          id: string
+          name: string
+          photo_url: string
+        }[]
       }
       get_user_role: {
         Args: { _user_id: string }
