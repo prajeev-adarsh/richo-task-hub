@@ -60,6 +60,35 @@ export type Database = {
           },
         ]
       }
+      doer_skills: {
+        Row: {
+          category: Database["public"]["Enums"]["task_category"]
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["task_category"]
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["task_category"]
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doer_skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           attachments: string[] | null
@@ -200,6 +229,44 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_items: {
+        Row: {
+          category: Database["public"]["Enums"]["task_category"] | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["task_category"] | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["task_category"] | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -529,6 +596,18 @@ export type Database = {
         }
         Returns: string
       }
+      get_doer_profile: {
+        Args: { _user_id: string }
+        Returns: {
+          avg_rating: number
+          completed_tasks: number
+          id: string
+          name: string
+          photo_url: string
+          skills: Database["public"]["Enums"]["task_category"][]
+          total_reviews: number
+        }[]
+      }
       get_public_profile: {
         Args: { _user_id: string }
         Returns: {
@@ -583,6 +662,7 @@ export type Database = {
         | "rating_received"
         | "new_message"
         | "new_comment"
+        | "new_task_posted"
       proof_status: "pending" | "accepted" | "rejected"
       task_category: "student" | "skilled" | "ai" | "custom"
       task_status:
@@ -733,6 +813,7 @@ export const Constants = {
         "rating_received",
         "new_message",
         "new_comment",
+        "new_task_posted",
       ],
       proof_status: ["pending", "accepted", "rejected"],
       task_category: ["student", "skilled", "ai", "custom"],

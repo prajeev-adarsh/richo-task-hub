@@ -19,6 +19,7 @@ import DoerDashboard from "./pages/DoerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Payments from "./pages/Payments";
 import Profile from "./pages/Profile";
+import DoerProfile from "./pages/DoerProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -84,6 +85,11 @@ const App = () => (
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } />
+              <Route path="/doer/:id" element={
+                <ProtectedRoute>
+                  <DoerProfile />
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

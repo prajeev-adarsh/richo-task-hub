@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Users, CheckCircle, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, CheckCircle, XCircle, Star, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+
+interface DoerProfile {
+  id: string;
+  name: string;
+  photo_url: string | null;
+  skills: string[];
+  avg_rating: number;
+  total_reviews: number;
+  completed_tasks: number;
+}
 
 interface Applicant {
   id: string;
@@ -21,6 +32,7 @@ interface Applicant {
     name: string;
     photo_url: string | null;
   };
+  profile?: DoerProfile | null;
 }
 
 interface ApplicantsListProps {
@@ -28,8 +40,23 @@ interface ApplicantsListProps {
   onAssign?: () => void;
 }
 
+const getCategoryLabel = (category: string) => {
+  const labels: Record<string, string> = {
+    student: 'Student',
+    skilled: 'Skilled',
+    creative: 'Creative',
+    delivery: 'Delivery',
+    virtual: 'Virtual',
+    home_services: 'Home',
+    events: 'Events',
+    other: 'Other',
+  };
+  return labels[category] || category;
+};
+
 const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
@@ -40,7 +67,7 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
 
   const fetchApplicants = async () => {
     try {
-      // Only fetch non-sensitive user fields (no email, phone, upi_id)
+      // Fetch applications with basic doer info
       const { data, error } = await supabase
         .from('task_applications')
         .select(`
@@ -51,7 +78,29 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
         .order('applied_at', { ascending: false });
 
       if (error) throw error;
-      setApplicants(data || []);
+
+      // Fetch profiles for all doers
+      const doerIds = (data || []).map(a => a.doer_id);
+      const profilesMap: Record<string, DoerProfile> = {};
+
+      if (doerIds.length > 0) {
+        const { data: profiles } = await supabase.rpc('get_public_profiles', { _user_ids: doerIds });
+        
+        // Also fetch detailed profile for each
+        for (const doerId of doerIds) {
+          const { data: profileData } = await supabase.rpc('get_doer_profile', { _user_id: doerId });
+          if (profileData && profileData.length > 0) {
+            profilesMap[doerId] = profileData[0];
+          }
+        }
+      }
+
+      const enrichedApplicants = (data || []).map(applicant => ({
+        ...applicant,
+        profile: profilesMap[applicant.doer_id] || null,
+      }));
+
+      setApplicants(enrichedApplicants);
     } catch (error) {
       logger.error('Error fetching applicants:', error);
       toast({
@@ -67,7 +116,6 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
   const handleAccept = async (application: Applicant) => {
     setProcessing(application.id);
     try {
-      // Update task to assign doer
       const { error: taskError } = await supabase
         .from('tasks')
         .update({
@@ -78,7 +126,6 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
 
       if (taskError) throw taskError;
 
-      // Update application status to accepted
       const { error: acceptError } = await supabase
         .from('task_applications')
         .update({ status: 'accepted' })
@@ -86,7 +133,6 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
 
       if (acceptError) throw acceptError;
 
-      // Update other applications to rejected
       const { error: rejectError } = await supabase
         .from('task_applications')
         .update({ status: 'rejected' })
@@ -186,7 +232,8 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
           <Card>
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={applicant.doer.photo_url || undefined} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {applicant.doer.name.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
@@ -196,13 +243,51 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
                   <div className="flex items-start justify-between">
                     <div>
                       <h4 className="font-medium">{applicant.doer.name}</h4>
+                      {/* Rating and stats */}
+                      {applicant.profile && (
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                          <span className="flex items-center gap-1">
+                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                            {applicant.profile.avg_rating.toFixed(1)}
+                            <span className="text-xs">({applicant.profile.total_reviews})</span>
+                          </span>
+                          <span>{applicant.profile.completed_tasks} tasks done</span>
+                        </div>
+                      )}
                     </div>
                     {getStatusBadge(applicant.status)}
                   </div>
 
-                  <p className="text-xs text-muted-foreground">
-                    Applied on {format(new Date(applicant.applied_at), 'MMM dd, yyyy HH:mm')}
-                  </p>
+                  {/* Skills badges */}
+                  {applicant.profile?.skills && applicant.profile.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {applicant.profile.skills.slice(0, 4).map((skill) => (
+                        <Badge key={skill} variant="outline" className="text-xs">
+                          {getCategoryLabel(skill)}
+                        </Badge>
+                      ))}
+                      {applicant.profile.skills.length > 4 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{applicant.profile.skills.length - 4}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      Applied {format(new Date(applicant.applied_at), 'MMM dd, yyyy HH:mm')}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => navigate(`/doer/${applicant.doer_id}`)}
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      View Profile
+                    </Button>
+                  </div>
 
                   {applicant.status === 'pending' && (
                     <div className="flex gap-2 pt-2">
