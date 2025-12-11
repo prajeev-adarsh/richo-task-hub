@@ -208,16 +208,14 @@ const DoerProfile = () => {
     }
   };
 
+  // Skills are now returned as actual names from the database
+  // getCategoryLabel is only used for portfolio categories now
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       student: 'Student Tasks',
       skilled: 'Skilled Work',
-      creative: 'Creative',
-      delivery: 'Delivery',
-      virtual: 'Virtual',
-      home_services: 'Home Services',
-      events: 'Events',
-      other: 'Other',
+      ai: 'Tech & Digital',
+      custom: 'Creative & Design',
     };
     return labels[category] || category;
   };
@@ -286,7 +284,7 @@ const DoerProfile = () => {
                   <div className="flex flex-wrap gap-2 mt-4">
                     {profile.skills.map((skill) => (
                       <Badge key={skill} variant="secondary">
-                        {getCategoryLabel(skill)}
+                        {skill}
                       </Badge>
                     ))}
                   </div>

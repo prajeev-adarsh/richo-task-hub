@@ -51,10 +51,19 @@ const DoerOnboarding = () => {
         .delete()
         .eq('user_id', user.id);
 
-      // Insert new skills
-      const skillsToInsert = selectedSkills.map(category => ({
+      // Fetch skill details to get category
+      const { data: skillsData, error: skillsError } = await supabase
+        .from('skills')
+        .select('id, category')
+        .in('id', selectedSkills);
+
+      if (skillsError) throw skillsError;
+
+      // Insert new skills with skill_id and category
+      const skillsToInsert = (skillsData || []).map(skill => ({
         user_id: user.id,
-        category: category as any,
+        skill_id: skill.id,
+        category: skill.category as any,
       }));
 
       const { error } = await supabase

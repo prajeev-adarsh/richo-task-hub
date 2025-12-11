@@ -40,19 +40,7 @@ interface ApplicantsListProps {
   onAssign?: () => void;
 }
 
-const getCategoryLabel = (category: string) => {
-  const labels: Record<string, string> = {
-    student: 'Student',
-    skilled: 'Skilled',
-    creative: 'Creative',
-    delivery: 'Delivery',
-    virtual: 'Virtual',
-    home_services: 'Home',
-    events: 'Events',
-    other: 'Other',
-  };
-  return labels[category] || category;
-};
+// Skills are now returned as actual names from the database
 
 const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => {
   const { toast } = useToast();
@@ -263,7 +251,7 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
                     <div className="flex flex-wrap gap-1">
                       {applicant.profile.skills.slice(0, 4).map((skill) => (
                         <Badge key={skill} variant="outline" className="text-xs">
-                          {getCategoryLabel(skill)}
+                          {skill}
                         </Badge>
                       ))}
                       {applicant.profile.skills.length > 4 && (

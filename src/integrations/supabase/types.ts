@@ -65,21 +65,31 @@ export type Database = {
           category: Database["public"]["Enums"]["task_category"]
           created_at: string | null
           id: string
+          skill_id: string | null
           user_id: string
         }
         Insert: {
           category: Database["public"]["Enums"]["task_category"]
           created_at?: string | null
           id?: string
+          skill_id?: string | null
           user_id: string
         }
         Update: {
           category?: Database["public"]["Enums"]["task_category"]
           created_at?: string | null
           id?: string
+          skill_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "doer_skills_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "doer_skills_user_id_fkey"
             columns: ["user_id"]
@@ -368,6 +378,27 @@ export type Database = {
           },
         ]
       }
+      skills: {
+        Row: {
+          category: Database["public"]["Enums"]["task_category"]
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["task_category"]
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["task_category"]
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       task_applications: {
         Row: {
           applied_at: string
@@ -604,7 +635,7 @@ export type Database = {
           id: string
           name: string
           photo_url: string
-          skills: Database["public"]["Enums"]["task_category"][]
+          skills: string[]
           total_reviews: number
         }[]
       }
