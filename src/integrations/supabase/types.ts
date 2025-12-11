@@ -382,18 +382,21 @@ export type Database = {
         Row: {
           category: Database["public"]["Enums"]["task_category"]
           created_at: string | null
+          icon: string | null
           id: string
           name: string
         }
         Insert: {
           category: Database["public"]["Enums"]["task_category"]
           created_at?: string | null
+          icon?: string | null
           id?: string
           name: string
         }
         Update: {
           category?: Database["public"]["Enums"]["task_category"]
           created_at?: string | null
+          icon?: string | null
           id?: string
           name?: string
         }
@@ -635,7 +638,7 @@ export type Database = {
           id: string
           name: string
           photo_url: string
-          skills: string[]
+          skills: Json
           total_reviews: number
         }[]
       }
