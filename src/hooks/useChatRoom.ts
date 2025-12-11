@@ -203,11 +203,12 @@ export const useChatRoom = (taskId: string) => {
   };
 
   const uploadAttachment = async (file: File) => {
-    if (!user) return null;
+    if (!user || !room) return null;
 
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // Use room.id as folder to match RLS policy: {room_id}/{filename}
+      const fileName = `${room.id}/${Date.now()}.${fileExt}`;
 
       const { data, error } = await supabase.storage
         .from('chat-attachments')
