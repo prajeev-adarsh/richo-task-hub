@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { CheckCircle2, Search, ChevronDown, ChevronRight, Circle } from 'lucide-react';
+import { LucideProps } from 'lucide-react';
+import dynamicIconImports from 'lucide-react/dynamicIconImports';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,6 +14,7 @@ interface Skill {
   id: string;
   name: string;
   category: string;
+  icon: string | null;
 }
 
 interface SkillsSelectionProps {
@@ -24,6 +27,27 @@ const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
   ai: { label: 'Tech & Digital', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
   student: { label: 'Academic & Writing', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
   skilled: { label: 'Trades & Services', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
+};
+
+// Dynamic icon component
+interface DynamicIconProps extends Omit<LucideProps, 'ref'> {
+  name: string;
+}
+
+const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
+  const iconName = name as keyof typeof dynamicIconImports;
+  
+  if (!dynamicIconImports[iconName]) {
+    return <Circle {...props} />;
+  }
+  
+  const LucideIcon = lazy(dynamicIconImports[iconName]);
+  
+  return (
+    <Suspense fallback={<Circle {...props} className={cn(props.className, 'animate-pulse')} />}>
+      <LucideIcon {...props} />
+    </Suspense>
+  );
 };
 
 const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSkillsChange }) => {
@@ -40,7 +64,7 @@ const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSki
     try {
       const { data, error } = await supabase
         .from('skills')
-        .select('id, name, category')
+        .select('id, name, category, icon')
         .order('name');
 
       if (error) throw error;
@@ -164,13 +188,19 @@ const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSki
                           key={skill.id}
                           onClick={() => toggleSkill(skill.id)}
                           className={cn(
-                            'px-3 py-1.5 rounded-full text-sm border transition-all',
+                            'px-3 py-1.5 rounded-full text-sm border transition-all flex items-center gap-1.5',
                             isSelected
                               ? 'bg-primary text-primary-foreground border-primary'
                               : 'bg-background border-border hover:border-primary/50 hover:bg-muted'
                           )}
                         >
-                          {isSelected && <CheckCircle2 className="inline-block w-3.5 h-3.5 mr-1.5 -mt-0.5" />}
+                          {skill.icon && (
+                            <DynamicIcon 
+                              name={skill.icon} 
+                              className="w-3.5 h-3.5" 
+                            />
+                          )}
+                          {isSelected && !skill.icon && <CheckCircle2 className="w-3.5 h-3.5" />}
                           {skill.name}
                         </button>
                       );

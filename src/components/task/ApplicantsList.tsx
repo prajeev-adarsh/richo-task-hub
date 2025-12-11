@@ -11,11 +11,16 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 
+interface SkillData {
+  name: string;
+  icon: string | null;
+}
+
 interface DoerProfile {
   id: string;
   name: string;
   photo_url: string | null;
-  skills: string[];
+  skills: SkillData[];
   avg_rating: number;
   total_reviews: number;
   completed_tasks: number;
@@ -78,7 +83,21 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
         for (const doerId of doerIds) {
           const { data: profileData } = await supabase.rpc('get_doer_profile', { _user_id: doerId });
           if (profileData && profileData.length > 0) {
-            profilesMap[doerId] = profileData[0];
+            const raw = profileData[0];
+            // Parse skills from JSON
+            const rawSkills = raw.skills;
+            const skills: SkillData[] = Array.isArray(rawSkills) 
+              ? (rawSkills as unknown as SkillData[])
+              : [];
+            profilesMap[doerId] = {
+              id: raw.id,
+              name: raw.name,
+              photo_url: raw.photo_url,
+              avg_rating: raw.avg_rating,
+              total_reviews: raw.total_reviews,
+              completed_tasks: raw.completed_tasks,
+              skills
+            };
           }
         }
       }
@@ -250,8 +269,8 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
                   {applicant.profile?.skills && applicant.profile.skills.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {applicant.profile.skills.slice(0, 4).map((skill) => (
-                        <Badge key={skill} variant="outline" className="text-xs">
-                          {skill}
+                        <Badge key={skill.name} variant="outline" className="text-xs">
+                          {skill.name}
                         </Badge>
                       ))}
                       {applicant.profile.skills.length > 4 && (

@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Briefcase, Award, Camera, Plus, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Star, Briefcase, Award, Camera, Plus, Trash2, Loader2, Circle } from 'lucide-react';
+import { LucideProps } from 'lucide-react';
+import dynamicIconImports from 'lucide-react/dynamicIconImports';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -15,16 +17,43 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import Navigation from '@/components/Navigation';
+import { cn } from '@/lib/utils';
+
+interface SkillData {
+  name: string;
+  icon: string | null;
+}
 
 interface DoerProfileData {
   id: string;
   name: string;
   photo_url: string | null;
-  skills: string[];
+  skills: SkillData[];
   avg_rating: number;
   total_reviews: number;
   completed_tasks: number;
 }
+
+// Dynamic icon component
+interface DynamicIconProps extends Omit<LucideProps, 'ref'> {
+  name: string;
+}
+
+const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
+  const iconName = name as keyof typeof dynamicIconImports;
+  
+  if (!dynamicIconImports[iconName]) {
+    return <Circle {...props} />;
+  }
+  
+  const LucideIcon = lazy(dynamicIconImports[iconName]);
+  
+  return (
+    <Suspense fallback={<Circle {...props} className={cn(props.className, 'animate-pulse')} />}>
+      <LucideIcon {...props} />
+    </Suspense>
+  );
+};
 
 interface PortfolioItem {
   id: string;
@@ -83,7 +112,21 @@ const DoerProfile = () => {
       const { data, error } = await supabase.rpc('get_doer_profile', { _user_id: id });
       if (error) throw error;
       if (data && data.length > 0) {
-        setProfile(data[0]);
+        const profileData = data[0];
+        // Parse skills from JSON - cast to unknown first then to SkillData[]
+        const rawSkills = profileData.skills;
+        const skills: SkillData[] = Array.isArray(rawSkills) 
+          ? (rawSkills as unknown as SkillData[])
+          : [];
+        setProfile({
+          id: profileData.id,
+          name: profileData.name,
+          photo_url: profileData.photo_url,
+          avg_rating: profileData.avg_rating,
+          total_reviews: profileData.total_reviews,
+          completed_tasks: profileData.completed_tasks,
+          skills
+        });
       }
     } catch (error) {
       logger.error('Error fetching doer profile:', error);
@@ -283,8 +326,9 @@ const DoerProfile = () => {
                 {profile.skills.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-4">
                     {profile.skills.map((skill) => (
-                      <Badge key={skill} variant="secondary">
-                        {skill}
+                      <Badge key={skill.name} variant="secondary" className="flex items-center gap-1.5">
+                        {skill.icon && <DynamicIcon name={skill.icon} className="w-3.5 h-3.5" />}
+                        {skill.name}
                       </Badge>
                     ))}
                   </div>
