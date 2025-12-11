@@ -10,14 +10,10 @@ interface SkillsSelectionProps {
 }
 
 const SKILL_CATEGORIES = [
-  { id: 'student', label: 'Student Tasks', description: 'Tutoring, assignments, research' },
-  { id: 'skilled', label: 'Skilled Work', description: 'Plumbing, electrical, carpentry' },
-  { id: 'creative', label: 'Creative', description: 'Design, photography, video editing' },
-  { id: 'delivery', label: 'Delivery', description: 'Package delivery, errands' },
-  { id: 'virtual', label: 'Virtual', description: 'Data entry, online research, admin' },
-  { id: 'home_services', label: 'Home Services', description: 'Cleaning, cooking, organizing' },
-  { id: 'events', label: 'Events', description: 'Event planning, catering support' },
-  { id: 'other', label: 'Other', description: 'Miscellaneous tasks' },
+  { id: 'student', label: 'Student Tasks', description: 'Tutoring, assignments, research, academic help' },
+  { id: 'skilled', label: 'Skilled Work', description: 'Plumbing, electrical, carpentry, repairs, delivery, errands' },
+  { id: 'ai', label: 'AI & Tech', description: 'Data entry, virtual assistance, online research, tech support' },
+  { id: 'custom', label: 'Custom Tasks', description: 'Creative work, events, home services, other tasks' },
 ];
 
 const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSkillsChange }) => {
