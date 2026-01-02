@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, User, Eye, Download, Star, FileText, CreditCard, Upload } from 'lucide-react';
+import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, Eye, Star, CreditCard, Upload, Pencil, Trash2, FileText, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
+import EditTaskDialog from '@/components/task/EditTaskDialog';
+import DeleteTaskDialog from '@/components/task/DeleteTaskDialog';
 
 interface Task {
   id: string;
@@ -95,6 +97,14 @@ const MyTasks = () => {
 
   // Payment state
   const [paymentFile, setPaymentFile] = useState<File | null>(null);
+
+  // Edit/Delete state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -516,6 +526,107 @@ const MyTasks = () => {
     setPaymentFile(null);
   };
 
+  // Edit task handler
+  const handleEditTask = async (taskId: string, data: {
+    title: string;
+    description: string;
+    category: 'student' | 'skilled' | 'ai' | 'custom';
+    location: string;
+    is_remote: boolean;
+    budget: number;
+    deadline: Date;
+    proof_required: boolean;
+  }) => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: data.title,
+          description: data.description,
+          category: data.category,
+          location: data.location,
+          is_remote: data.is_remote,
+          budget: data.budget,
+          deadline: data.deadline.toISOString(),
+          proof_required: data.proof_required,
+        })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Task Updated",
+        description: "Your task has been updated successfully",
+      });
+
+      fetchTasks();
+      setShowEditModal(false);
+      setTaskToEdit(null);
+    } catch (error) {
+      logger.error('Error updating task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update task",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete task handler
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+
+    setDeleting(true);
+    try {
+      // First delete associated applications
+      const { error: appError } = await supabase
+        .from('task_applications')
+        .delete()
+        .eq('task_id', taskToDelete.id);
+
+      if (appError) throw appError;
+
+      // Delete the task
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Task Deleted",
+        description: "Your task has been deleted successfully",
+      });
+
+      fetchTasks();
+      setShowDeleteModal(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      logger.error('Error deleting task:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete task",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openEditModal = (task: Task) => {
+    setTaskToEdit(task);
+    setShowEditModal(true);
+  };
+
+  const openDeleteModal = (task: Task) => {
+    setTaskToDelete(task);
+    setShowDeleteModal(true);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open': return 'bg-blue-100 text-blue-800';
@@ -684,6 +795,30 @@ const MyTasks = () => {
                         </Button>
                       )}
                     </div>
+
+                    {/* Edit/Delete buttons for open tasks only */}
+                    {task.status === 'open' && (
+                      <div className="flex gap-2 pt-2 border-t border-border">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => openEditModal(task)}
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => openDeleteModal(task)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -988,6 +1123,24 @@ const MyTasks = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Task Dialog */}
+        <EditTaskDialog
+          task={taskToEdit}
+          open={showEditModal}
+          onOpenChange={setShowEditModal}
+          onSave={handleEditTask}
+          saving={saving}
+        />
+
+        {/* Delete Task Dialog */}
+        <DeleteTaskDialog
+          taskTitle={taskToDelete?.title || ''}
+          open={showDeleteModal}
+          onOpenChange={setShowDeleteModal}
+          onConfirm={handleDeleteTask}
+          deleting={deleting}
+        />
       </div>
     </div>
   );
