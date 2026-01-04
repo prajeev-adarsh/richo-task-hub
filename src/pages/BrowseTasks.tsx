@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { MapPin, Calendar, IndianRupee, Filter, Search } from 'lucide-react';
+import { MapPin, Calendar, IndianRupee, Filter, Search, X, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -13,8 +13,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import Navigation from '@/components/Navigation';
 
 interface Task {
   id: string;
@@ -27,11 +29,31 @@ interface Task {
   deadline: string;
   proof_required: boolean;
   client_id: string;
+  created_at: string;
 }
 
 interface TaskApplication {
   task_id: string;
 }
+
+const CATEGORIES = [
+  { value: 'student', label: 'Student Tasks' },
+  { value: 'skilled', label: 'Skilled Work' },
+  { value: 'creative', label: 'Creative & Design' },
+  { value: 'delivery', label: 'Delivery' },
+  { value: 'virtual', label: 'Virtual Assistant' },
+  { value: 'home_services', label: 'Home Services' },
+  { value: 'events', label: 'Events' },
+  { value: 'other', label: 'Other' },
+];
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest First' },
+  { value: 'oldest', label: 'Oldest First' },
+  { value: 'budget_high', label: 'Highest Budget' },
+  { value: 'budget_low', label: 'Lowest Budget' },
+  { value: 'deadline', label: 'Earliest Deadline' },
+];
 
 const BrowseTasks = () => {
   const navigate = useNavigate();
@@ -42,11 +64,14 @@ const BrowseTasks = () => {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
 
-  // Filters
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [remoteFilter, setRemoteFilter] = useState<boolean | null>(null);
   const [budgetRange, setBudgetRange] = useState([0, 100000]);
-  const [cityFilter, setCityFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   // Modal state
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -61,14 +86,12 @@ const BrowseTasks = () => {
 
   const fetchTasks = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('status', 'open')
         .is('doer_id', null)
         .order('created_at', { ascending: false });
-
-      const { data, error } = await query;
       
       if (error) throw error;
       setTasks(data || []);
@@ -100,13 +123,66 @@ const BrowseTasks = () => {
     }
   };
 
-  const filteredTasks = tasks.filter(task => {
-    if (categoryFilter && task.category !== categoryFilter) return false;
-    if (remoteFilter !== null && task.is_remote !== remoteFilter) return false;
-    if (task.budget < budgetRange[0] || task.budget > budgetRange[1]) return false;
-    if (cityFilter && !task.location.toLowerCase().includes(cityFilter.toLowerCase())) return false;
-    return true;
-  });
+  const clearFilters = () => {
+    setSearchQuery('');
+    setCategoryFilter('');
+    setRemoteFilter(null);
+    setBudgetRange([0, 100000]);
+    setLocationFilter('');
+    setSortBy('newest');
+  };
+
+  const hasActiveFilters = searchQuery || categoryFilter || remoteFilter !== null || 
+    budgetRange[0] > 0 || budgetRange[1] < 100000 || locationFilter;
+
+  const filteredAndSortedTasks = React.useMemo(() => {
+    let result = tasks.filter(task => {
+      // Text search in title and description
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        if (!task.title.toLowerCase().includes(query) && 
+            !task.description.toLowerCase().includes(query)) {
+          return false;
+        }
+      }
+      
+      // Category filter
+      if (categoryFilter && task.category !== categoryFilter) return false;
+      
+      // Remote filter
+      if (remoteFilter !== null && task.is_remote !== remoteFilter) return false;
+      
+      // Budget range
+      if (task.budget < budgetRange[0] || task.budget > budgetRange[1]) return false;
+      
+      // Location filter
+      if (locationFilter && !task.location.toLowerCase().includes(locationFilter.toLowerCase())) {
+        return false;
+      }
+      
+      return true;
+    });
+
+    // Sort
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'budget_high':
+          return b.budget - a.budget;
+        case 'budget_low':
+          return a.budget - b.budget;
+        case 'deadline':
+          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [tasks, searchQuery, categoryFilter, remoteFilter, budgetRange, locationFilter, sortBy]);
 
   const hasApplied = (taskId: string) => {
     return applications.some(app => app.task_id === taskId);
@@ -131,7 +207,6 @@ const BrowseTasks = () => {
         description: "Your application has been sent to the client",
       });
 
-      // Update applications list
       setApplications(prev => [...prev, { task_id: selectedTask.id }]);
       setShowApplyModal(false);
     } catch (error) {
@@ -151,160 +226,265 @@ const BrowseTasks = () => {
     setShowApplyModal(true);
   };
 
+  const getDaysRemaining = (deadline: string) => {
+    const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (days < 0) return 'Overdue';
+    if (days === 0) return 'Due today';
+    if (days === 1) return '1 day left';
+    return `${days} days left`;
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">R</span>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <span className="text-white font-bold text-2xl">R</span>
+            </div>
+            <p className="text-muted-foreground">Loading tasks...</p>
           </div>
-          <p className="text-muted-foreground">Loading tasks...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <Search className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Browse Tasks</h1>
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header with Search */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <Search className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold">Browse Tasks</h1>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {filteredAndSortedTasks.length} task{filteredAndSortedTasks.length !== 1 ? 's' : ''} found
+            </span>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            placeholder="Search tasks by title or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-12 text-base"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-1/2 -translate-y-1/2"
+              onClick={() => setSearchQuery('')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All categories</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="skilled">Skilled</SelectItem>
-                    <SelectItem value="ai">AI</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Work Type</Label>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    checked={remoteFilter === true}
-                    onCheckedChange={(checked) => setRemoteFilter(checked ? true : null)}
-                  />
-                  <span className="text-sm">Remote only</span>
+        <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="mb-6">
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    Filters
+                    {hasActiveFilters && (
+                      <Badge variant="secondary" className="ml-2">Active</Badge>
+                    )}
+                  </CardTitle>
+                  {filtersOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                 </div>
-              </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                  {/* Category */}
+                  <div className="space-y-2">
+                    <Label>Category</Label>
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All categories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All categories</SelectItem>
+                        {CATEGORIES.map(cat => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label>Budget Range (₹{budgetRange[0]} - ₹{budgetRange[1]})</Label>
-                <Slider
-                  value={budgetRange}
-                  onValueChange={setBudgetRange}
-                  max={100000}
-                  min={0}
-                  step={1000}
-                  className="w-full"
-                />
-              </div>
+                  {/* Location */}
+                  <div className="space-y-2">
+                    <Label>Location</Label>
+                    <Input
+                      placeholder="City or area..."
+                      value={locationFilter}
+                      onChange={(e) => setLocationFilter(e.target.value)}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label>City</Label>
-                <Input
-                  placeholder="Search city..."
-                  value={cityFilter}
-                  onChange={(e) => setCityFilter(e.target.value)}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  {/* Budget Range */}
+                  <div className="space-y-2">
+                    <Label>Budget: ₹{budgetRange[0].toLocaleString()} - ₹{budgetRange[1].toLocaleString()}</Label>
+                    <Slider
+                      value={budgetRange}
+                      onValueChange={setBudgetRange}
+                      max={100000}
+                      min={0}
+                      step={1000}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Sort By */}
+                  <div className="space-y-2">
+                    <Label>Sort By</Label>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SORT_OPTIONS.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Remote Toggle & Clear */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Work Type</Label>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={remoteFilter === true}
+                          onCheckedChange={(checked) => setRemoteFilter(checked ? true : null)}
+                        />
+                        <span className="text-sm">Remote only</span>
+                      </div>
+                    </div>
+                    
+                    {hasActiveFilters && (
+                      <Button variant="outline" size="sm" onClick={clearFilters} className="w-full">
+                        <X className="h-4 w-4 mr-1" />
+                        Clear Filters
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Tasks Grid */}
-        {filteredTasks.length === 0 ? (
+        {filteredAndSortedTasks.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
               <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">No tasks found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters</p>
+              <p className="text-muted-foreground mb-4">Try adjusting your search or filters</p>
+              {hasActiveFilters && (
+                <Button variant="outline" onClick={clearFilters}>
+                  Clear All Filters
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTasks.map((task) => (
-              <Card key={task.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg line-clamp-2">{task.title}</CardTitle>
-                    <Badge variant="secondary" className="capitalize">
-                      {task.category}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground text-sm line-clamp-3">
-                    {task.description}
-                  </p>
+            {filteredAndSortedTasks.map((task) => {
+              const daysText = getDaysRemaining(task.deadline);
+              const isUrgent = daysText === 'Due today' || daysText === 'Overdue' || daysText === '1 day left';
+              
+              return (
+                <Card key={task.id} className="hover:shadow-lg transition-shadow group">
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
+                        {task.title}
+                      </CardTitle>
+                      <Badge variant="secondary" className="capitalize shrink-0">
+                        {CATEGORIES.find(c => c.value === task.category)?.label || task.category}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-muted-foreground text-sm line-clamp-3">
+                      {task.description}
+                    </p>
 
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <IndianRupee className="h-4 w-4 text-green-600" />
-                      <span className="font-medium">₹{task.budget.toLocaleString()}</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <IndianRupee className="h-4 w-4 text-green-600" />
+                        <span className="font-semibold text-green-600">₹{task.budget.toLocaleString()}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="h-4 w-4 text-blue-600" />
+                        <span>{task.is_remote ? 'Remote' : task.location}</span>
+                        {task.is_remote && <Badge variant="outline" className="text-xs">Remote</Badge>}
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-orange-600" />
+                        <span>{format(new Date(task.deadline), 'MMM dd, yyyy')}</span>
+                        <Badge 
+                          variant={isUrgent ? "destructive" : "outline"} 
+                          className="text-xs ml-auto"
+                        >
+                          <Clock className="h-3 w-3 mr-1" />
+                          {daysText}
+                        </Badge>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-blue-600" />
-                      <span>{task.is_remote ? 'Remote' : task.location}</span>
-                      {task.is_remote && <Badge variant="outline">Remote</Badge>}
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-orange-600" />
-                      <span>{format(new Date(task.deadline), 'MMM dd, yyyy')}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 pt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => navigate(`/task/${task.id}`)}
-                    >
-                      View Details
-                    </Button>
-                    
-                    {hasApplied(task.id) ? (
-                      <Button variant="secondary" size="sm" className="flex-1" disabled>
-                        Applied
-                      </Button>
-                    ) : (
+                    <div className="flex gap-2 pt-4 border-t">
                       <Button 
+                        variant="outline" 
                         size="sm" 
                         className="flex-1"
-                        onClick={() => openApplyModal(task)}
-                        disabled={applying === task.id}
+                        onClick={() => navigate(`/task/${task.id}`)}
                       >
-                        {applying === task.id ? 'Applying...' : 'Apply'}
+                        View Details
                       </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      
+                      {hasApplied(task.id) ? (
+                        <Button variant="secondary" size="sm" className="flex-1" disabled>
+                          Applied
+                        </Button>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => openApplyModal(task)}
+                          disabled={applying === task.id}
+                        >
+                          {applying === task.id ? 'Applying...' : 'Apply Now'}
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
 
@@ -321,20 +501,20 @@ const BrowseTasks = () => {
             {selectedTask && (
               <div className="py-4">
                 <h4 className="font-medium mb-2">{selectedTask.title}</h4>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
                   {selectedTask.description}
                 </p>
-                <div className="space-y-1 text-sm">
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Budget:</span>
-                    <span className="font-medium">₹{selectedTask.budget.toLocaleString()}</span>
+                    <span className="text-muted-foreground">Budget:</span>
+                    <span className="font-medium text-green-600">₹{selectedTask.budget.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Location:</span>
+                    <span className="text-muted-foreground">Location:</span>
                     <span>{selectedTask.is_remote ? 'Remote' : selectedTask.location}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Deadline:</span>
+                    <span className="text-muted-foreground">Deadline:</span>
                     <span>{format(new Date(selectedTask.deadline), 'MMM dd, yyyy')}</span>
                   </div>
                 </div>
