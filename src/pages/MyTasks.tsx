@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, Eye, Star, CreditCard, Upload, Pencil, Trash2, FileText, Download } from 'lucide-react';
+import { Calendar, IndianRupee, Users, Clock, CheckCircle, XCircle, Eye, Star, CreditCard, Upload, Pencil, Trash2, FileText, Download, Ban } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import EditTaskDialog from '@/components/task/EditTaskDialog';
 import DeleteTaskDialog from '@/components/task/DeleteTaskDialog';
+import CancelTaskDialog from '@/components/task/CancelTaskDialog';
 
 interface Task {
   id: string;
@@ -98,11 +99,13 @@ const MyTasks = () => {
   // Payment state
   const [paymentFile, setPaymentFile] = useState<File | null>(null);
 
-  // Edit/Delete state
+  // Edit/Delete/Cancel state
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [taskToCancel, setTaskToCancel] = useState<Task | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -627,6 +630,11 @@ const MyTasks = () => {
     setShowDeleteModal(true);
   };
 
+  const openCancelModal = (task: Task) => {
+    setTaskToCancel(task);
+    setShowCancelModal(true);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open': return 'bg-blue-100 text-blue-800';
@@ -816,6 +824,21 @@ const MyTasks = () => {
                         >
                           <Trash2 className="h-4 w-4 mr-1" />
                           Delete
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Cancel button for in_progress tasks */}
+                    {task.status === 'in_progress' && (
+                      <div className="pt-2 border-t border-border">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => openCancelModal(task)}
+                        >
+                          <Ban className="h-4 w-4 mr-1" />
+                          Cancel Task
                         </Button>
                       </div>
                     )}
@@ -1140,6 +1163,14 @@ const MyTasks = () => {
           onOpenChange={setShowDeleteModal}
           onConfirm={handleDeleteTask}
           deleting={deleting}
+        />
+
+        {/* Cancel Task Dialog */}
+        <CancelTaskDialog
+          task={taskToCancel}
+          open={showCancelModal}
+          onOpenChange={setShowCancelModal}
+          onSuccess={fetchTasks}
         />
       </div>
     </div>
