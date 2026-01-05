@@ -4,15 +4,20 @@ import { useUser } from '@/components/UserContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { useDoerSkills } from '@/hooks/useDoerSkills';
+import { useSavedTasks } from '@/hooks/useSavedTasks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Briefcase, DollarSign, Star, TrendingUp } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Search, Briefcase, DollarSign, Star, TrendingUp, Sparkles, Bookmark } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 
 const DoerDashboard = () => {
   const { t } = useLanguage();
   const { user } = useUser();
   const navigate = useNavigate();
+  const { skills } = useDoerSkills();
+  const { savedTaskIds, toggleSaveTask, isTaskSaved } = useSavedTasks();
   const [stats, setStats] = useState({
     activeGigs: 0,
     completedJobs: 0,
@@ -20,6 +25,7 @@ const DoerDashboard = () => {
     rating: 0
   });
   const [availableTasks, setAvailableTasks] = useState([]);
+  const [recommendedTasks, setRecommendedTasks] = useState([]);
   const [myGigs, setMyGigs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -96,6 +102,21 @@ const DoerDashboard = () => {
           .eq('status', 'open')
           .limit(5);
 
+        // Fetch recommended tasks based on doer's skills
+        let recommendedTasksData: any[] = [];
+        if (skills.length > 0) {
+          const { data } = await supabase
+            .from('tasks')
+            .select(`
+              *,
+              users!tasks_client_id_fkey(name)
+            `)
+            .eq('status', 'open')
+            .in('category', skills as ("ai" | "custom" | "skilled" | "student")[])
+            .limit(6);
+          recommendedTasksData = data || [];
+        }
+
         // Calculate stats
         const totalEarned = paymentsData?.reduce((sum, payment) => sum + payment.amount, 0) || 0;
         const avgRating = ratingsData?.length > 0 
@@ -110,6 +131,7 @@ const DoerDashboard = () => {
         });
 
         setAvailableTasks(availableTasksData || []);
+        setRecommendedTasks(recommendedTasksData);
         setMyGigs(activeGigsData || []);
       } catch (error) {
         logger.error('Error fetching dashboard data:', error);
@@ -119,7 +141,7 @@ const DoerDashboard = () => {
     };
 
     fetchDashboardData();
-  }, [user?.id]);
+  }, [user?.id, skills]);
 
   if (loading) {
     return (
@@ -177,6 +199,77 @@ const DoerDashboard = () => {
             );
           })}
         </div>
+
+        {/* Recommended Tasks Section - Based on Skills */}
+        {recommendedTasks.length > 0 && (
+          <Card className="rounded-2xl border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <span>Recommended for You</span>
+                <Badge variant="secondary" className="ml-2">Based on your skills</Badge>
+              </CardTitle>
+              <CardDescription>
+                Tasks that match your expertise in {skills.slice(0, 3).join(', ')}{skills.length > 3 ? '...' : ''}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recommendedTasks.map((task: any) => (
+                  <div
+                    key={task.id}
+                    className="p-4 bg-background rounded-2xl border hover:border-primary/50 transition-colors cursor-pointer group"
+                    onClick={() => navigate(`/task/${task.id}`)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-semibold line-clamp-1 group-hover:text-primary transition-colors">{task.title}</h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSaveTask(task.id);
+                        }}
+                      >
+                        <Bookmark className={`h-4 w-4 ${isTaskSaved(task.id) ? 'fill-primary text-primary' : ''}`} />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <Badge variant="outline" className="text-xs capitalize">{task.category}</Badge>
+                      <span>•</span>
+                      <span className="font-medium text-primary">₹{task.budget.toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{task.description}</p>
+                    <Button size="sm" className="w-full rounded-xl">
+                      View & Apply
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Saved Tasks Quick Link */}
+        {savedTaskIds.size > 0 && (
+          <Card className="rounded-2xl cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate('/saved-tasks')}>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                  <Bookmark className="h-5 w-5 text-primary fill-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold">Saved Tasks</p>
+                  <p className="text-sm text-muted-foreground">{savedTaskIds.size} task{savedTaskIds.size !== 1 ? 's' : ''} saved for later</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="rounded-xl">
+                View All
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Available Tasks */}
