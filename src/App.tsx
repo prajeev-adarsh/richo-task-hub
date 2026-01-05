@@ -14,6 +14,7 @@ import PostTask from "./pages/PostTask";
 import BrowseTasks from "./pages/BrowseTasks";
 import MyTasks from "./pages/MyTasks";
 import MyGigs from "./pages/MyGigs";
+import MyApplications from "./pages/MyApplications";
 import SavedTasks from "./pages/SavedTasks";
 import ClientDashboard from "./pages/ClientDashboard";
 import DoerDashboard from "./pages/DoerDashboard";
@@ -61,6 +62,11 @@ const App = () => (
               <Route path="/saved-tasks" element={
                 <ProtectedRoute allowedRoles={['doer']}>
                   <SavedTasks />
+                </ProtectedRoute>
+              } />
+              <Route path="/my-applications" element={
+                <ProtectedRoute allowedRoles={['doer']}>
+                  <MyApplications />
                 </ProtectedRoute>
               } />
               <Route path="/client-dashboard" element={

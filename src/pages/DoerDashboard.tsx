@@ -9,7 +9,7 @@ import { useSavedTasks } from '@/hooks/useSavedTasks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Briefcase, DollarSign, Star, TrendingUp, Sparkles, Bookmark } from 'lucide-react';
+import { Search, Briefcase, DollarSign, Star, TrendingUp, Sparkles, Bookmark, FileText } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 
 const DoerDashboard = () => {
@@ -270,6 +270,24 @@ const DoerDashboard = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* My Applications Quick Link */}
+        <Card className="rounded-2xl cursor-pointer hover:border-primary/50 transition-colors" onClick={() => navigate('/my-applications')}>
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                <FileText className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold">My Applications</p>
+                <p className="text-sm text-muted-foreground">Track your job applications</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="rounded-xl">
+              View All
+            </Button>
+          </CardContent>
+        </Card>
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Available Tasks */}
