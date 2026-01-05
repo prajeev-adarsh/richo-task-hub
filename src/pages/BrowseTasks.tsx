@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { MapPin, Calendar, IndianRupee, Filter, Search, X, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { MapPin, Calendar, IndianRupee, Filter, Search, X, ChevronDown, ChevronUp, Clock, Bookmark } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSavedTasks } from '@/hooks/useSavedTasks';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,8 +58,9 @@ const SORT_OPTIONS = [
 
 const BrowseTasks = () => {
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { user, role } = useUser();
   const { toast } = useToast();
+  const { toggleSaveTask, isTaskSaved, savedTaskIds } = useSavedTasks();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [applications, setApplications] = useState<TaskApplication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +78,8 @@ const BrowseTasks = () => {
   // Modal state
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  const isDoer = role === 'doer';
 
   useEffect(() => {
     fetchTasks();
@@ -261,10 +265,21 @@ const BrowseTasks = () => {
             <h1 className="text-3xl font-bold">Browse Tasks</h1>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">
               {filteredAndSortedTasks.length} task{filteredAndSortedTasks.length !== 1 ? 's' : ''} found
             </span>
+            {isDoer && savedTaskIds.size > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => navigate('/saved-tasks')}
+              >
+                <Bookmark className="h-4 w-4 fill-primary text-primary" />
+                {savedTaskIds.size} Saved
+              </Button>
+            )}
           </div>
         </div>
 
@@ -421,9 +436,24 @@ const BrowseTasks = () => {
                       <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
                         {task.title}
                       </CardTitle>
-                      <Badge variant="secondary" className="capitalize shrink-0">
-                        {CATEGORIES.find(c => c.value === task.category)?.label || task.category}
-                      </Badge>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {isDoer && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSaveTask(task.id);
+                            }}
+                          >
+                            <Bookmark className={`h-4 w-4 ${isTaskSaved(task.id) ? 'fill-primary text-primary' : ''}`} />
+                          </Button>
+                        )}
+                        <Badge variant="secondary" className="capitalize">
+                          {CATEGORIES.find(c => c.value === task.category)?.label || task.category}
+                        </Badge>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">

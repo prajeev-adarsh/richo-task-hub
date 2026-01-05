@@ -14,6 +14,7 @@ import PostTask from "./pages/PostTask";
 import BrowseTasks from "./pages/BrowseTasks";
 import MyTasks from "./pages/MyTasks";
 import MyGigs from "./pages/MyGigs";
+import SavedTasks from "./pages/SavedTasks";
 import ClientDashboard from "./pages/ClientDashboard";
 import DoerDashboard from "./pages/DoerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -55,6 +56,11 @@ const App = () => (
               <Route path="/my-gigs" element={
                 <ProtectedRoute allowedRoles={['doer']}>
                   <MyGigs />
+                </ProtectedRoute>
+              } />
+              <Route path="/saved-tasks" element={
+                <ProtectedRoute allowedRoles={['doer']}>
+                  <SavedTasks />
                 </ProtectedRoute>
               } />
               <Route path="/client-dashboard" element={
