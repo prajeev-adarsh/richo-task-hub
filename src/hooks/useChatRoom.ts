@@ -4,12 +4,18 @@ import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 
+export interface Attachment {
+  url: string;
+  name: string;
+  type: string;
+}
+
 export interface Message {
   id: string;
   room_id: string;
   sender_id: string;
   content: string;
-  attachments: string[] | null;
+  attachments: Attachment[] | null;
   read: boolean;
   created_at: string;
   sender?: {
@@ -110,7 +116,13 @@ export const useChatRoom = (taskId: string) => {
         return;
       }
 
-      setMessages(data || []);
+      // Transform database records to Message type
+      const transformedMessages: Message[] = (data || []).map((msg) => ({
+        ...msg,
+        attachments: msg.attachments as unknown as Attachment[] | null,
+      }));
+
+      setMessages(transformedMessages);
     };
 
     fetchMessages();
@@ -133,14 +145,20 @@ export const useChatRoom = (taskId: string) => {
 
           const sender = senderData?.[0] || null;
 
-          const newMessage = {
-            ...payload.new,
+          const newMessage: Message = {
+            id: payload.new.id,
+            room_id: payload.new.room_id,
+            sender_id: payload.new.sender_id,
+            content: payload.new.content,
+            attachments: payload.new.attachments as Attachment[] | null,
+            read: payload.new.read,
+            created_at: payload.new.created_at,
             sender: sender ? {
               id: sender.id,
               name: sender.name,
               photo_url: sender.photo_url
-            } : null,
-          } as Message;
+            } : undefined,
+          };
 
           setMessages((prev) => [...prev, newMessage]);
 
@@ -176,7 +194,7 @@ export const useChatRoom = (taskId: string) => {
     };
   }, [room, user, toast]);
 
-  const sendMessage = async (content: string, attachments?: string[]) => {
+  const sendMessage = async (content: string, attachments?: Attachment[]) => {
     if (!room || !user) return;
 
     setSending(true);
@@ -185,7 +203,7 @@ export const useChatRoom = (taskId: string) => {
         room_id: room.id,
         sender_id: user.id,
         content,
-        attachments: attachments || null,
+        attachments: attachments ? JSON.parse(JSON.stringify(attachments)) : null,
         read: false,
       });
 
@@ -202,7 +220,7 @@ export const useChatRoom = (taskId: string) => {
     }
   };
 
-  const uploadAttachment = async (file: File) => {
+  const uploadAttachment = async (file: File): Promise<{ url: string; name: string; type: string } | null> => {
     if (!user || !room) return null;
 
     try {
@@ -216,11 +234,18 @@ export const useChatRoom = (taskId: string) => {
 
       if (error) throw error;
 
-      const { data: urlData } = supabase.storage
+      // Use signed URL for private bucket (1 hour expiry)
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('chat-attachments')
-        .getPublicUrl(data.path);
+        .createSignedUrl(data.path, 3600);
 
-      return urlData.publicUrl;
+      if (signedError) throw signedError;
+
+      return {
+        url: signedData.signedUrl,
+        name: file.name,
+        type: file.type,
+      };
     } catch (error: any) {
       logger.error('Error uploading attachment:', error);
       toast({
@@ -230,6 +255,15 @@ export const useChatRoom = (taskId: string) => {
       });
       return null;
     }
+  };
+
+  const getSignedUrl = async (path: string): Promise<string | null> => {
+    const { data, error } = await supabase.storage
+      .from('chat-attachments')
+      .createSignedUrl(path, 3600);
+    
+    if (error) return null;
+    return data.signedUrl;
   };
 
   return {
