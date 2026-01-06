@@ -1,19 +1,20 @@
 import { useState, useRef, KeyboardEvent } from 'react';
-import { Send, Paperclip, X, Loader2 } from 'lucide-react';
+import { Send, Paperclip, X, Loader2, Image, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import type { Attachment } from '@/hooks/useChatRoom';
 
 interface MessageInputProps {
-  onSend: (content: string, attachments?: string[]) => Promise<void>;
-  onUpload: (file: File) => Promise<string | null>;
+  onSend: (content: string, attachments?: Attachment[]) => Promise<void>;
+  onUpload: (file: File) => Promise<Attachment | null>;
   disabled?: boolean;
 }
 
 export const MessageInput = ({ onSend, onUpload, disabled }: MessageInputProps) => {
   const [message, setMessage] = useState('');
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -52,11 +53,11 @@ export const MessageInput = ({ onSend, onUpload, disabled }: MessageInputProps) 
     }
 
     setUploading(true);
-    const url = await onUpload(file);
+    const attachment = await onUpload(file);
     setUploading(false);
 
-    if (url) {
-      setAttachments((prev) => [...prev, url]);
+    if (attachment) {
+      setAttachments((prev) => [...prev, attachment]);
       toast({
         title: 'File uploaded',
         description: 'Your file has been attached',
@@ -69,6 +70,8 @@ export const MessageInput = ({ onSend, onUpload, disabled }: MessageInputProps) 
     }
   };
 
+  const isImage = (type: string) => type.startsWith('image/');
+
   const removeAttachment = (index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
@@ -77,16 +80,20 @@ export const MessageInput = ({ onSend, onUpload, disabled }: MessageInputProps) 
     <div className="border-t bg-background p-4">
       {attachments.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
-          {attachments.map((url, idx) => (
+          {attachments.map((attachment, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-2 bg-muted px-3 py-1 rounded-full text-sm"
+              className="flex items-center gap-2 bg-muted px-3 py-1 rounded-full text-sm max-w-[200px]"
             >
-              <Paperclip className="w-3 h-3" />
-              <span>Attachment {idx + 1}</span>
+              {isImage(attachment.type) ? (
+                <Image className="w-3 h-3 flex-shrink-0" />
+              ) : (
+                <FileText className="w-3 h-3 flex-shrink-0" />
+              )}
+              <span className="truncate">{attachment.name}</span>
               <button
                 onClick={() => removeAttachment(idx)}
-                className="hover:text-destructive"
+                className="hover:text-destructive flex-shrink-0"
               >
                 <X className="w-3 h-3" />
               </button>

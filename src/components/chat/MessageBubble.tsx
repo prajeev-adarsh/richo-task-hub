@@ -1,8 +1,8 @@
 import { format } from 'date-fns';
-import { CheckCheck, Check, Paperclip } from 'lucide-react';
+import { CheckCheck, Check, Paperclip, Image, FileText, Download } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import type { Message } from '@/hooks/useChatRoom';
+import type { Message, Attachment } from '@/hooks/useChatRoom';
 
 interface MessageBubbleProps {
   message: Message;
@@ -39,24 +39,48 @@ export const MessageBubble = ({ message, isOwn }: MessageBubbleProps) => {
               : 'bg-muted text-foreground'
           )}
         >
-          <p className="text-sm whitespace-pre-wrap break-words">
-            {message.content}
-          </p>
+          {message.content && (
+            <p className="text-sm whitespace-pre-wrap break-words">
+              {message.content}
+            </p>
+          )}
 
           {message.attachments && message.attachments.length > 0 && (
-            <div className="mt-2 space-y-1">
-              {message.attachments.map((url, idx) => (
-                <a
-                  key={idx}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-xs hover:underline"
-                >
-                  <Paperclip className="w-3 h-3" />
-                  Attachment {idx + 1}
-                </a>
-              ))}
+            <div className={cn('space-y-2', message.content && 'mt-2')}>
+              {message.attachments.map((attachment, idx) => {
+                const isImage = attachment.type?.startsWith('image/');
+                
+                return isImage ? (
+                  <a
+                    key={idx}
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <img
+                      src={attachment.url}
+                      alt={attachment.name}
+                      className="max-w-full rounded-lg max-h-64 object-cover hover:opacity-90 transition-opacity"
+                    />
+                  </a>
+                ) : (
+                  <a
+                    key={idx}
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:opacity-80 transition-opacity',
+                      isOwn ? 'bg-primary-foreground/10' : 'bg-background/50'
+                    )}
+                  >
+                    <FileText className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate flex-1">{attachment.name}</span>
+                    <Download className="w-3 h-3 flex-shrink-0" />
+                  </a>
+                );
+              })}
             </div>
           )}
         </div>
