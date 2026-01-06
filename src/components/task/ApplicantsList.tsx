@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { Users, CheckCircle, XCircle, Star, ExternalLink } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Star, ExternalLink, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/components/UserContext';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -50,9 +51,11 @@ interface ApplicantsListProps {
 const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useUser();
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [messagingDoerId, setMessagingDoerId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchApplicants();
@@ -195,6 +198,57 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
     }
   };
 
+  const handleMessage = async (applicant: Applicant) => {
+    if (!user) return;
+    
+    setMessagingDoerId(applicant.doer_id);
+    try {
+      // Check if chat room already exists
+      const { data: existingRoom, error: fetchError } = await supabase
+        .from('chat_rooms')
+        .select('id')
+        .eq('task_id', taskId)
+        .eq('doer_id', applicant.doer_id)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (existingRoom) {
+        navigate(`/chat/${existingRoom.id}`);
+        return;
+      }
+
+      // Create new chat room
+      const { data: newRoom, error: createError } = await supabase
+        .from('chat_rooms')
+        .insert({
+          task_id: taskId,
+          client_id: user.id,
+          doer_id: applicant.doer_id,
+        })
+        .select('id')
+        .single();
+
+      if (createError) throw createError;
+
+      toast({
+        title: "Chat started",
+        description: `You can now message ${applicant.doer.name}`,
+      });
+
+      navigate(`/chat/${newRoom.id}`);
+    } catch (error) {
+      logger.error('Error starting chat:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start chat",
+        variant: "destructive",
+      });
+    } finally {
+      setMessagingDoerId(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'accepted':
@@ -296,29 +350,40 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
                     </Button>
                   </div>
 
-                  {applicant.status === 'pending' && (
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleAccept(applicant)}
-                        disabled={processing !== null}
-                        className="flex-1"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Accept
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleReject(applicant.id, applicant.doer.name)}
-                        disabled={processing !== null}
-                        className="flex-1"
-                      >
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Reject
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleMessage(applicant)}
+                      disabled={messagingDoerId === applicant.doer_id}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-1" />
+                      {messagingDoerId === applicant.doer_id ? 'Opening...' : 'Message'}
+                    </Button>
+                    {applicant.status === 'pending' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAccept(applicant)}
+                          disabled={processing !== null}
+                          className="flex-1"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Accept
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleReject(applicant.id, applicant.doer.name)}
+                          disabled={processing !== null}
+                          className="flex-1"
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
