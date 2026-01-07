@@ -37,27 +37,13 @@ const CancelTaskDialog = ({ open, onOpenChange, task, onSuccess }: CancelTaskDia
     setCancelling(true);
     try {
       // Update task status to cancelled
+      // The database trigger will automatically notify the doer if one is assigned
       const { error: taskError } = await supabase
         .from('tasks')
         .update({ status: 'cancelled' })
         .eq('id', task.id);
 
       if (taskError) throw taskError;
-
-      // If there's an assigned doer, send them a notification
-      if (task.doer_id) {
-        const { error: notifyError } = await supabase.rpc('create_notification', {
-          p_user_id: task.doer_id,
-          p_type: 'task_assigned', // Using existing type for task-related notifications
-          p_title: 'Task Cancelled',
-          p_message: `The task "${task.title}" has been cancelled by the client.${reason ? ` Reason: ${reason}` : ''}`,
-          p_payload: { task_id: task.id, reason: reason || null, cancelled: true }
-        });
-
-        if (notifyError) {
-          logger.error('Error sending cancellation notification:', notifyError);
-        }
-      }
 
       toast({
         title: "Task cancelled",
