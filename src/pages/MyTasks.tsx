@@ -96,6 +96,10 @@ const MyTasks = () => {
   const [review, setReview] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
 
+  // Signed URL state
+  const [proofSignedUrl, setProofSignedUrl] = useState<string | null>(null);
+  const [loadingSignedUrl, setLoadingSignedUrl] = useState(false);
+
   // Payment state
   const [paymentFile, setPaymentFile] = useState<File | null>(null);
 
@@ -218,12 +222,36 @@ const MyTasks = () => {
     await fetchApplications(task.id);
   };
 
-  const handleViewProof = (task: Task) => {
+  const handleViewProof = async (task: Task) => {
     const proof = getProofForTask(task.id);
     if (proof) {
       setSelectedTask(task);
       setSelectedProof(proof);
       setShowProofModal(true);
+      setProofSignedUrl(null);
+      
+      // Generate signed URL for the proof file
+      setLoadingSignedUrl(true);
+      try {
+        const { data, error } = await supabase.storage
+          .from('proofs')
+          .createSignedUrl(proof.file_url, 3600); // 1 hour expiry
+        
+        if (error) {
+          logger.error('Error creating signed URL:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load proof file",
+            variant: "destructive",
+          });
+        } else {
+          setProofSignedUrl(data.signedUrl);
+        }
+      } catch (error) {
+        logger.error('Error creating signed URL:', error);
+      } finally {
+        setLoadingSignedUrl(false);
+      }
     }
   };
 
@@ -459,11 +487,8 @@ const MyTasks = () => {
 
     if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage
-      .from('proofs')
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
+    // Return the file path, not a public URL - signed URLs will be generated when viewing
+    return fileName;
   };
 
   const handleMarkAsPaid = async () => {
@@ -968,10 +993,11 @@ const MyTasks = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(selectedProof.file_url, '_blank')}
+                        onClick={() => proofSignedUrl && window.open(proofSignedUrl, '_blank')}
+                        disabled={loadingSignedUrl || !proofSignedUrl}
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Download
+                        {loadingSignedUrl ? 'Loading...' : 'Download'}
                       </Button>
                     </div>
                   </div>
