@@ -151,11 +151,8 @@ const MyGigs = () => {
 
     if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage
-      .from('proofs')
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
+    // Return the file path, not a public URL - signed URLs will be generated when viewing
+    return fileName;
   };
 
   const handleSubmitProof = async () => {
