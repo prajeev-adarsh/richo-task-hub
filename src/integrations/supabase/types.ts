@@ -851,6 +851,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      release_payment: {
+        Args: { p_payment_proof_url?: string; p_task_id: string }
+        Returns: string
+      }
       switch_user_role: {
         Args: { _new_role: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
