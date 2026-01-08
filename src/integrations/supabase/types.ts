@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          admin_user_id: string
+          created_at: string | null
+          id: string
+          reason: string | null
+          target_data: Json | null
+          target_id: string
+          target_table: string
+        }
+        Insert: {
+          action: string
+          admin_user_id: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          target_data?: Json | null
+          target_id: string
+          target_table: string
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          target_data?: Json | null
+          target_id?: string
+          target_table?: string
+        }
+        Relationships: []
+      }
       chat_rooms: {
         Row: {
           client_id: string
@@ -723,6 +756,7 @@ export type Database = {
           active_role: Database["public"]["Enums"]["user_role"]
           auth_user_id: string
           created_at: string
+          deleted_at: string | null
           email: string
           id: string
           language: Database["public"]["Enums"]["user_language"]
@@ -737,6 +771,7 @@ export type Database = {
           active_role: Database["public"]["Enums"]["user_role"]
           auth_user_id: string
           created_at?: string
+          deleted_at?: string | null
           email: string
           id?: string
           language?: Database["public"]["Enums"]["user_language"]
@@ -751,6 +786,7 @@ export type Database = {
           active_role?: Database["public"]["Enums"]["user_role"]
           auth_user_id?: string
           created_at?: string
+          deleted_at?: string | null
           email?: string
           id?: string
           language?: Database["public"]["Enums"]["user_language"]
@@ -854,6 +890,10 @@ export type Database = {
       release_payment: {
         Args: { p_payment_proof_url?: string; p_task_id: string }
         Returns: string
+      }
+      soft_delete_user: {
+        Args: { p_reason?: string; p_user_id: string }
+        Returns: boolean
       }
       switch_user_role: {
         Args: { _new_role: Database["public"]["Enums"]["user_role"] }
