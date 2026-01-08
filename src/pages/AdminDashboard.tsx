@@ -101,6 +101,8 @@ const AdminDashboard = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>('');
+  const [deletionReason, setDeletionReason] = useState<string>('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
@@ -137,6 +139,7 @@ const AdminDashboard = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
+        .is('deleted_at', null) // Exclude soft-deleted users
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -285,37 +288,63 @@ const AdminDashboard = () => {
 
   const handleDeleteUser = async () => {
     if (!selectedUserId) return;
+    
+    // Require a deletion reason for audit purposes
+    if (!deletionReason.trim() || deletionReason.trim().length < 10) {
+      toast({
+        title: "Reason required",
+        description: "Please provide a deletion reason (at least 10 characters)",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', selectedUserId);
+      // Use secure soft delete RPC function
+      const { error } = await supabase.rpc('soft_delete_user', {
+        p_user_id: selectedUserId,
+        p_reason: deletionReason.trim()
+      });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific error messages from the RPC
+        if (error.message.includes('active tasks')) {
+          throw new Error('Cannot delete user with active tasks. Please cancel or complete their tasks first.');
+        } else if (error.message.includes('pending payments')) {
+          throw new Error('Cannot delete user with pending payments. Please resolve payments first.');
+        } else if (error.message.includes('admin users')) {
+          throw new Error('Cannot delete admin users');
+        }
+        throw error;
+      }
 
       toast({
-        title: "User deleted",
-        description: `${selectedUserName} has been deleted successfully`,
+        title: "User deactivated",
+        description: `${selectedUserName} has been deactivated successfully. Their data is preserved for audit purposes.`,
       });
 
       fetchUsers();
       setShowDeleteModal(false);
       setSelectedUserId(null);
       setSelectedUserName('');
-    } catch (error) {
+      setDeletionReason('');
+    } catch (error: any) {
       logger.error('Error deleting user:', error);
       toast({
         title: "Error",
-        description: "Failed to delete user",
+        description: error.message || "Failed to delete user",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const openDeleteModal = (userId: string, userName: string) => {
     setSelectedUserId(userId);
     setSelectedUserName(userName);
+    setDeletionReason('');
     setShowDeleteModal(true);
   };
 
@@ -858,20 +887,47 @@ const AdminDashboard = () => {
         </div>
 
         {/* Delete User Confirmation Modal */}
-        <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <Dialog open={showDeleteModal} onOpenChange={(open) => {
+          if (!isDeleting) {
+            setShowDeleteModal(open);
+            if (!open) {
+              setDeletionReason('');
+            }
+          }
+        }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete User</DialogTitle>
+              <DialogTitle>Deactivate User</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete {selectedUserName}? This action cannot be undone.
+                Are you sure you want to deactivate {selectedUserName}? 
+                The user's data will be preserved for audit purposes but they will no longer be able to access their account.
               </DialogDescription>
             </DialogHeader>
+            <div className="py-4">
+              <label className="text-sm font-medium mb-2 block">
+                Reason for deactivation <span className="text-destructive">*</span>
+              </label>
+              <textarea
+                className="w-full min-h-[80px] px-3 py-2 text-sm border rounded-md bg-background"
+                placeholder="Please provide a reason for deactivating this user (minimum 10 characters)..."
+                value={deletionReason}
+                onChange={(e) => setDeletionReason(e.target.value)}
+                disabled={isDeleting}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                This reason will be logged for audit purposes.
+              </p>
+            </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleDeleteUser}>
-                Delete User
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteUser} 
+                disabled={isDeleting || deletionReason.trim().length < 10}
+              >
+                {isDeleting ? 'Deactivating...' : 'Deactivate User'}
               </Button>
             </DialogFooter>
           </DialogContent>
