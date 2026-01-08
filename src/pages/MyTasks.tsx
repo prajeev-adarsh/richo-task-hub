@@ -494,6 +494,16 @@ const MyTasks = () => {
   const handleMarkAsPaid = async () => {
     if (!selectedTask || !selectedTask.doer || !user) return;
 
+    // Validate task is completed before allowing payment
+    if (selectedTask.status !== 'completed') {
+      toast({
+        title: "Cannot release payment",
+        description: "Payment can only be released for completed tasks",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setProcessingPayment(true);
     try {
       let uploadedProofUrl = null;
@@ -503,28 +513,24 @@ const MyTasks = () => {
         uploadedProofUrl = await uploadPaymentProof(paymentFile, selectedTask.id);
       }
 
-      // Save payment record
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          task_id: selectedTask.id,
-          client_id: user.id,
-          doer_id: selectedTask.doer.id,
-          amount: selectedTask.budget,
-          payment_mode: 'upi_manual',
-          payment_status: 'paid',
-          uploaded_proof: uploadedProofUrl
+      // Use secure RPC function that validates task completion
+      const { data, error: paymentError } = await supabase
+        .rpc('release_payment', {
+          p_task_id: selectedTask.id,
+          p_payment_proof_url: uploadedProofUrl
         });
 
-      if (paymentError) throw paymentError;
-
-      // Update task payment status
-      const { error: taskError } = await supabase
-        .from('tasks')
-        .update({ payment_status: 'paid' })
-        .eq('id', selectedTask.id);
-
-      if (taskError) throw taskError;
+      if (paymentError) {
+        // Handle specific error messages from the RPC
+        if (paymentError.message.includes('completed')) {
+          throw new Error('Task must be completed before releasing payment');
+        } else if (paymentError.message.includes('Proof of completion')) {
+          throw new Error('Please accept the proof of completion first');
+        } else if (paymentError.message.includes('already been released')) {
+          throw new Error('Payment has already been released for this task');
+        }
+        throw paymentError;
+      }
 
       toast({
         title: "✅ Payment marked as paid",
