@@ -1,8 +1,7 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Briefcase, Award, Camera, Plus, Trash2, Loader2, Circle, CheckCircle2, Calendar, TrendingUp, Share2, Copy, MessageCircle, Check } from 'lucide-react';
-import { LucideProps } from 'lucide-react';
-import dynamicIconImports from 'lucide-react/dynamicIconImports';
+import { ArrowLeft, Star, Briefcase, Award, Camera, Plus, Trash2, Loader2, CheckCircle2, Calendar, TrendingUp, Share2, Copy, MessageCircle, Check } from 'lucide-react';
+import { SkillIcon } from '@/lib/skillIcons';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +17,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Navigation from '@/components/Navigation';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface SkillData {
@@ -35,26 +33,6 @@ interface DoerProfileData {
   total_reviews: number;
   completed_tasks: number;
 }
-
-interface DynamicIconProps extends Omit<LucideProps, 'ref'> {
-  name: string;
-}
-
-const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
-  const iconName = name as keyof typeof dynamicIconImports;
-  
-  if (!dynamicIconImports[iconName]) {
-    return <Circle {...props} />;
-  }
-  
-  const LucideIcon = lazy(dynamicIconImports[iconName]);
-  
-  return (
-    <Suspense fallback={<Circle {...props} className={cn(props.className, 'animate-pulse')} />}>
-      <LucideIcon {...props} />
-    </Suspense>
-  );
-};
 
 interface PortfolioItem {
   id: string;
@@ -521,7 +499,7 @@ const DoerProfile = () => {
                         variant="secondary" 
                         className="flex items-center gap-1.5 px-3 py-1 bg-background/80 backdrop-blur-sm"
                       >
-                        {skill.icon && <DynamicIcon name={skill.icon} className="w-3.5 h-3.5" />}
+                        {skill.icon && <SkillIcon name={skill.icon} className="w-3.5 h-3.5" />}
                         {skill.name}
                       </Badge>
                     ))}
