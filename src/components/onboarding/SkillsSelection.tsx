@@ -1,7 +1,6 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { CheckCircle2, Search, ChevronDown, ChevronRight, Circle } from 'lucide-react';
-import { LucideProps } from 'lucide-react';
-import dynamicIconImports from 'lucide-react/dynamicIconImports';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle2, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { SkillIcon } from '@/lib/skillIcons';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,7 +17,7 @@ interface Skill {
 }
 
 interface SkillsSelectionProps {
-  selectedSkills: string[]; // skill IDs
+  selectedSkills: string[];
   onSkillsChange: (skills: string[]) => void;
 }
 
@@ -27,27 +26,6 @@ const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
   ai: { label: 'Tech & Digital', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
   student: { label: 'Academic & Writing', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
   skilled: { label: 'Trades & Services', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
-};
-
-// Dynamic icon component
-interface DynamicIconProps extends Omit<LucideProps, 'ref'> {
-  name: string;
-}
-
-const DynamicIcon = ({ name, ...props }: DynamicIconProps) => {
-  const iconName = name as keyof typeof dynamicIconImports;
-  
-  if (!dynamicIconImports[iconName]) {
-    return <Circle {...props} />;
-  }
-  
-  const LucideIcon = lazy(dynamicIconImports[iconName]);
-  
-  return (
-    <Suspense fallback={<Circle {...props} className={cn(props.className, 'animate-pulse')} />}>
-      <LucideIcon {...props} />
-    </Suspense>
-  );
 };
 
 const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSkillsChange }) => {
@@ -92,14 +70,12 @@ const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSki
     );
   };
 
-  // Group skills by category
   const groupedSkills = skills.reduce((acc, skill) => {
     if (!acc[skill.category]) acc[skill.category] = [];
     acc[skill.category].push(skill);
     return acc;
   }, {} as Record<string, Skill[]>);
 
-  // Filter skills based on search
   const filteredGroupedSkills = Object.entries(groupedSkills).reduce((acc, [category, categorySkills]) => {
     const filtered = categorySkills.filter(skill =>
       skill.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -108,7 +84,6 @@ const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSki
     return acc;
   }, {} as Record<string, Skill[]>);
 
-  // Count selected skills per category
   const selectedCountByCategory = (category: string) => {
     return skills.filter(s => s.category === category && selectedSkills.includes(s.id)).length;
   };
@@ -127,7 +102,6 @@ const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSki
         Select your skills to receive notifications for matching tasks.
       </p>
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -138,7 +112,6 @@ const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSki
         />
       </div>
 
-      {/* Selected count */}
       {selectedSkills.length > 0 && (
         <div className="flex items-center gap-2 text-sm">
           <Badge variant="secondary" className="bg-primary/10 text-primary">
@@ -147,7 +120,6 @@ const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSki
         </div>
       )}
 
-      {/* Skills by category */}
       <ScrollArea className="h-[320px] pr-4">
         <div className="space-y-3">
           {Object.entries(filteredGroupedSkills).map(([category, categorySkills]) => {
@@ -195,7 +167,7 @@ const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSki
                           )}
                         >
                           {skill.icon && (
-                            <DynamicIcon 
+                            <SkillIcon 
                               name={skill.icon} 
                               className="w-3.5 h-3.5" 
                             />
