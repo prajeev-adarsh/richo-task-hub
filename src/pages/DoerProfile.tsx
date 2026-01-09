@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, Briefcase, Award, Camera, Plus, Trash2, Loader2, CheckCircle2, Calendar, TrendingUp, Share2, Copy, MessageCircle, Check } from 'lucide-react';
 import { SkillIcon } from '@/lib/skillIcons';
+import { OptimizedImage } from '@/components/ui/optimized-image';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -660,13 +661,12 @@ const DoerProfile = () => {
                         className="overflow-hidden group relative cursor-pointer hover:shadow-lg transition-shadow"
                         onClick={() => setSelectedImage(item)}
                       >
-                        <div className="aspect-video overflow-hidden">
-                          <img
-                            src={item.image_url}
-                            alt={item.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
+                        <OptimizedImage
+                          src={item.image_url}
+                          alt={item.title}
+                          aspectRatio="video"
+                          className="w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        />
                         <CardContent className="p-4">
                           <h4 className="font-semibold">{item.title}</h4>
                           {item.description && (
