@@ -146,10 +146,10 @@ const PostTask = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="student">Student</SelectItem>
-                          <SelectItem value="skilled">Skilled</SelectItem>
-                          <SelectItem value="ai">AI</SelectItem>
-                          <SelectItem value="custom">Custom</SelectItem>
+                          <SelectItem value="ai">AI Workflows & Automation</SelectItem>
+                          <SelectItem value="skilled">Vibe Coding</SelectItem>
+                          <SelectItem value="student">Prompt Engineering</SelectItem>
+                          <SelectItem value="custom">AI Video Editing</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

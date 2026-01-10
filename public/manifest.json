@@ -1,11 +1,11 @@
 {
-  "name": "Richo - Task Platform",
+  "name": "Richo - AI Freelance Marketplace",
   "short_name": "Richo",
-  "description": "Multilingual Task Platform for Real World & AI Tasks",
+  "description": "Connect with top AI talent - Prompt Engineers, Vibe Coders, and AI Automation Experts. The Upwork for AI.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#7c3aed",
+  "background_color": "#0a0c14",
+  "theme_color": "#00b8d9",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -57,17 +57,17 @@
       "purpose": "maskable any"
     }
   ],
-  "categories": ["productivity", "business"],
+  "categories": ["productivity", "business", "technology"],
   "shortcuts": [
     {
-      "name": "Browse Tasks",
+      "name": "Find AI Talent",
       "url": "/browse",
-      "description": "Find available tasks"
+      "description": "Browse and hire AI experts"
     },
     {
-      "name": "Post Task",
+      "name": "Post Project",
       "url": "/post-task",
-      "description": "Create a new task"
+      "description": "Create a new AI project"
     }
   ]
 }
