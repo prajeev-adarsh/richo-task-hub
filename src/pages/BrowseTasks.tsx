@@ -38,14 +38,14 @@ interface TaskApplication {
 }
 
 const CATEGORIES = [
-  { value: 'student', label: 'Student Tasks' },
-  { value: 'skilled', label: 'Skilled Work' },
-  { value: 'creative', label: 'Creative & Design' },
-  { value: 'delivery', label: 'Delivery' },
-  { value: 'virtual', label: 'Virtual Assistant' },
-  { value: 'home_services', label: 'Home Services' },
-  { value: 'events', label: 'Events' },
-  { value: 'other', label: 'Other' },
+  // Primary AI Categories
+  { value: 'ai', label: 'AI Workflows & Automation' },
+  { value: 'skilled', label: 'Vibe Coding' },
+  { value: 'student', label: 'Prompt Engineering' },
+  { value: 'custom', label: 'AI Video Editing' },
+  // Secondary Categories
+  { value: 'web_design', label: 'Web Design' },
+  { value: 'general', label: 'General Freelancing' },
 ];
 
 const SORT_OPTIONS = [
