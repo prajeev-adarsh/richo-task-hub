@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/components/LanguageContext';
-import { useUser } from '@/components/UserContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, LogIn, Globe, Mail } from 'lucide-react';
+import { UserPlus, LogIn, Globe, Mail, CheckCircle, ArrowLeft, Sparkles, Brain } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
@@ -40,11 +39,27 @@ const loginSchema = z.object({
 type UserRole = 'client' | 'doer';
 type UserLanguage = 'en' | 'te' | 'hi';
 
-const Auth = () => {
+interface AuthProps {
+  defaultRole?: UserRole;
+}
+
+const Auth = ({ defaultRole }: AuthProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t, language, setLanguage } = useLanguage();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
+
+  // Determine role from route
+  const getRoleFromPath = (): UserRole | undefined => {
+    if (defaultRole) return defaultRole;
+    if (location.pathname === '/auth/client') return 'client';
+    if (location.pathname === '/auth/expert') return 'doer';
+    return undefined;
+  };
+
+  const presetRole = getRoleFromPath();
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -61,6 +76,11 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
+  // Email verification state
+  const [showVerificationScreen, setShowVerificationScreen] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
+
   // Signup form state
   const [signupData, setSignupData] = useState({
     name: '',
@@ -68,9 +88,16 @@ const Auth = () => {
     phone: '',
     password: '',
     confirmPassword: '',
-    role: '' as UserRole,
+    role: (presetRole || '') as UserRole,
     language: language as UserLanguage,
   });
+
+  // Update role when preset role changes
+  useEffect(() => {
+    if (presetRole) {
+      setSignupData(prev => ({ ...prev, role: presetRole }));
+    }
+  }, [presetRole]);
 
   // Detect password reset sessions
   useEffect(() => {
@@ -152,11 +179,45 @@ const Auth = () => {
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
+        email: loginEmail.trim(),
         password: loginPassword,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check if this is an invalid credentials error
+        if (error.message === 'Invalid login credentials') {
+          // Check if the email exists in the users table
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('email', loginEmail.trim().toLowerCase())
+            .maybeSingle();
+
+          if (!existingUser) {
+            // Email doesn't exist - prompt to sign up
+            toast({
+              title: "No account found",
+              description: "This email isn't registered. Create a new account to get started.",
+              variant: "destructive",
+            });
+            // Pre-fill email and switch to signup tab
+            setSignupData(prev => ({ ...prev, email: loginEmail.trim() }));
+            setActiveTab('signup');
+            setIsLoading(false);
+            return;
+          } else {
+            // Email exists but password is wrong
+            toast({
+              title: "Incorrect password",
+              description: "The password you entered is incorrect. Please try again or reset your password.",
+              variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+          }
+        }
+        throw error;
+      }
 
       if (data.user) {
         // Fetch user profile to get active_role for redirect
@@ -207,7 +268,7 @@ const Auth = () => {
         email: signupData.email.trim(),
         password: signupData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth`,
         },
       });
 
@@ -225,7 +286,7 @@ const Auth = () => {
           .insert({
             auth_user_id: data.user.id,
             name: signupData.name.trim(),
-            email: signupData.email.trim(),
+            email: signupData.email.trim().toLowerCase(),
             phone: signupData.phone?.trim() || null,
             role: signupData.role,
             active_role: signupData.role,
@@ -252,15 +313,9 @@ const Auth = () => {
 
         logger.info('Profile and role created successfully');
         
-        toast({
-          title: "Account created successfully!",
-          description: "Please check your email to verify your account.",
-        });
-
-        // Redirect based on role
-        if (signupData.role === 'client') navigate('/client-dashboard');
-        else if (signupData.role === 'doer') navigate('/doer-dashboard');
-        else navigate('/');
+        // Show email verification screen instead of redirecting
+        setVerificationEmail(signupData.email.trim());
+        setShowVerificationScreen(true);
       }
     } catch (error: any) {
       logger.error('Signup error:', error);
@@ -270,8 +325,10 @@ const Auth = () => {
       // Handle specific error types
       if (error.message?.includes('row-level security')) {
         errorMessage = "Unable to create account. Please try again.";
-      } else if (error.message?.includes('duplicate key')) {
-        errorMessage = "An account with this email already exists.";
+      } else if (error.message?.includes('duplicate key') || error.message?.includes('already registered')) {
+        errorMessage = "An account with this email already exists. Please login instead.";
+        setLoginEmail(signupData.email.trim());
+        setActiveTab('login');
       } else if (error.message?.includes('Failed to fetch')) {
         errorMessage = "Network error. Please check your connection and try again.";
       }
@@ -283,6 +340,34 @@ const Auth = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerificationEmail = async () => {
+    setIsResendingEmail(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: verificationEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email sent!",
+        description: "A new verification email has been sent to your inbox.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to resend",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsResendingEmail(false);
     }
   };
 
@@ -321,18 +406,133 @@ const Auth = () => {
     { value: 'hi', label: 'हिंदी' },
   ];
 
+  // Get role-specific content
+  const getRoleContent = () => {
+    if (presetRole === 'client') {
+      return {
+        icon: Sparkles,
+        title: 'Hire Top AI Talent',
+        description: 'Create your free account to post projects and connect with vetted AI experts',
+        signupTitle: 'Create Client Account',
+        signupDescription: 'Start hiring AI experts for your projects',
+      };
+    } else if (presetRole === 'doer') {
+      return {
+        icon: Brain,
+        title: 'Join as AI Expert',
+        description: 'Showcase your AI skills and get discovered by clients worldwide',
+        signupTitle: 'Create Expert Account',
+        signupDescription: 'Start earning by completing AI projects',
+      };
+    }
+    return {
+      icon: null,
+      title: 'Welcome to Richo',
+      description: t('tagline'),
+      signupTitle: 'Create your account',
+      signupDescription: 'Join Richo to start posting or completing projects',
+    };
+  };
+
+  const roleContent = getRoleContent();
+  const RoleIcon = roleContent.icon;
+
+  // Email verification screen
+  if (showVerificationScreen) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="rounded-2xl text-center">
+            <CardHeader className="pb-4">
+              <div className="w-20 h-20 bg-success/10 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <CheckCircle className="h-10 w-10 text-success" />
+              </div>
+              <CardTitle className="text-2xl">Check Your Email</CardTitle>
+              <CardDescription className="text-base mt-2">
+                We've sent a verification link to:
+              </CardDescription>
+              <p className="font-semibold text-foreground mt-2">{verificationEmail}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Click the link in the email to verify your account. 
+                Once verified, you can log in and start using Richo.
+              </p>
+              
+              <div className="pt-4 space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full rounded-2xl"
+                  onClick={handleResendVerificationEmail}
+                  disabled={isResendingEmail}
+                >
+                  {isResendingEmail ? 'Sending...' : "Didn't receive it? Resend Email"}
+                </Button>
+                
+                <Button
+                  className="w-full rounded-2xl"
+                  onClick={() => {
+                    setShowVerificationScreen(false);
+                    setLoginEmail(verificationEmail);
+                    setActiveTab('login');
+                  }}
+                >
+                  Already verified? Login here
+                </Button>
+              </div>
+
+              <div className="pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/')}
+                  className="text-muted-foreground"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Home
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Back button for role-specific pages */}
+        {presetRole && (
+          <div className="mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-3 mb-4">
-            <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">R</span>
-            </div>
+            {RoleIcon ? (
+              <div className={`w-12 h-12 ${presetRole === 'client' ? 'bg-primary/10' : 'bg-accent/10'} rounded-2xl flex items-center justify-center`}>
+                <RoleIcon className={`h-6 w-6 ${presetRole === 'client' ? 'text-primary' : 'text-accent'}`} />
+              </div>
+            ) : (
+              <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center">
+                <span className="text-white font-bold text-2xl">R</span>
+              </div>
+            )}
             <h1 className="text-4xl font-bold text-gradient">Richo</h1>
           </div>
-          <p className="text-muted-foreground">{t('tagline')}</p>
+          <h2 className="text-xl font-semibold text-foreground mb-2">{roleContent.title}</h2>
+          <p className="text-muted-foreground">{roleContent.description}</p>
         </div>
 
         {/* Language Selector */}
@@ -394,7 +594,7 @@ const Auth = () => {
             </CardContent>
           </Card>
         ) : (
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'signup')} className="w-full">
             <TabsList className="grid w-full grid-cols-2 rounded-2xl">
               <TabsTrigger value="login" className="rounded-2xl">
                 <LogIn className="h-4 w-4 mr-2" />
@@ -497,8 +697,8 @@ const Auth = () => {
           <TabsContent value="signup">
             <Card className="rounded-2xl">
               <CardHeader>
-                <CardTitle>Create your account</CardTitle>
-                <CardDescription>Join Richo to start posting or completing tasks</CardDescription>
+                <CardTitle>{roleContent.signupTitle}</CardTitle>
+                <CardDescription>{roleContent.signupDescription}</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSignup} className="space-y-4">
@@ -529,7 +729,9 @@ const Auth = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-phone">Phone Number</Label>
+                    <Label htmlFor="signup-phone">
+                      Phone Number <span className="text-muted-foreground text-xs">(optional)</span>
+                    </Label>
                     <Input
                       id="signup-phone"
                       type="tel"
@@ -540,21 +742,24 @@ const Auth = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-role">Role</Label>
-                    <Select
-                      value={signupData.role}
-                      onValueChange={(value: UserRole) => setSignupData(prev => ({ ...prev, role: value }))}
-                    >
-                      <SelectTrigger className="rounded-2xl">
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="client">Client - Post tasks</SelectItem>
-                        <SelectItem value="doer">Doer - Complete tasks</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Only show role selector if no preset role */}
+                  {!presetRole && (
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-role">I want to</Label>
+                      <Select
+                        value={signupData.role}
+                        onValueChange={(value: UserRole) => setSignupData(prev => ({ ...prev, role: value }))}
+                      >
+                        <SelectTrigger className="rounded-2xl">
+                          <SelectValue placeholder="Select how you'll use Richo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="client">Hire AI Experts for my projects</SelectItem>
+                          <SelectItem value="doer">Offer my AI expertise</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="signup-language">Language Preference</Label>
@@ -586,6 +791,9 @@ const Auth = () => {
                       required
                       className="rounded-2xl"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Min 8 characters, 1 uppercase, 1 number
+                    </p>
                   </div>
 
                   <div className="space-y-2">

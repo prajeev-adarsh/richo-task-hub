@@ -53,6 +53,8 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/client" element={<Auth />} />
+                <Route path="/auth/expert" element={<Auth />} />
                 <Route path="/task/:id" element={<TaskDetails />} />
                 <Route path="/chat/:taskId" element={
                   <ProtectedRoute>
