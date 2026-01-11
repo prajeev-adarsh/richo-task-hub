@@ -10,7 +10,13 @@ const RoleSelector = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = (role?: string) => {
-    navigate('/auth');
+    if (role === 'client') {
+      navigate('/auth/client');
+    } else if (role === 'doer') {
+      navigate('/auth/expert');
+    } else {
+      navigate('/auth');
+    }
   };
 
   const roles = [
