@@ -916,7 +916,17 @@ export type Database = {
         | "new_comment"
         | "new_task_posted"
       proof_status: "pending" | "accepted" | "rejected"
-      task_category: "student" | "skilled" | "ai" | "custom"
+      task_category:
+        | "student"
+        | "skilled"
+        | "ai"
+        | "custom"
+        | "ai_workflows"
+        | "vibe_coding"
+        | "prompt_engineering"
+        | "ai_video"
+        | "web_design"
+        | "general"
       task_status:
         | "open"
         | "assigned"
@@ -1068,7 +1078,18 @@ export const Constants = {
         "new_task_posted",
       ],
       proof_status: ["pending", "accepted", "rejected"],
-      task_category: ["student", "skilled", "ai", "custom"],
+      task_category: [
+        "student",
+        "skilled",
+        "ai",
+        "custom",
+        "ai_workflows",
+        "vibe_coding",
+        "prompt_engineering",
+        "ai_video",
+        "web_design",
+        "general",
+      ],
       task_status: [
         "open",
         "assigned",
