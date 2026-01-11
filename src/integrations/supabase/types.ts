@@ -891,6 +891,7 @@ export type Database = {
         Args: { p_payment_proof_url?: string; p_task_id: string }
         Returns: string
       }
+      sanitize_notification_text: { Args: { p_text: string }; Returns: string }
       send_contact_message: {
         Args: { p_doer_id: string; p_message: string }
         Returns: string
