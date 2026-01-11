@@ -327,18 +327,30 @@ const DoerProfile = () => {
       return;
     }
 
+    if (contactMessage.trim().length < 10) {
+      toast({ title: 'Message must be at least 10 characters', variant: 'destructive' });
+      return;
+    }
+
     setSendingMessage(true);
     try {
-      // Create a notification for the doer
-      const { error } = await supabase.rpc('create_notification', {
-        p_user_id: id as string,
-        p_type: 'new_message',
-        p_title: 'New message from a client',
-        p_message: `${user.name} wants to connect: "${contactMessage.substring(0, 100)}${contactMessage.length > 100 ? '...' : ''}"`,
-        p_payload: { from_user_id: user.id, from_user_name: user.name, message: contactMessage }
+      // Use the secure send_contact_message function with rate limiting
+      const { error } = await supabase.rpc('send_contact_message', {
+        p_doer_id: id as string,
+        p_message: contactMessage.trim()
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific error messages from the RPC
+        if (error.message.includes('Rate limit')) {
+          toast({ title: 'Too many messages', description: 'Please wait before sending more messages.', variant: 'destructive' });
+        } else if (error.message.includes('2 messages per day')) {
+          toast({ title: 'Daily limit reached', description: 'You can only send 2 messages per day to the same expert.', variant: 'destructive' });
+        } else {
+          throw error;
+        }
+        return;
+      }
 
       toast({ title: 'Message sent successfully!' });
       setShowContactDialog(false);
