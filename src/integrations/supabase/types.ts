@@ -891,6 +891,10 @@ export type Database = {
         Args: { p_payment_proof_url?: string; p_task_id: string }
         Returns: string
       }
+      send_contact_message: {
+        Args: { p_doer_id: string; p_message: string }
+        Returns: string
+      }
       soft_delete_user: {
         Args: { p_reason?: string; p_user_id: string }
         Returns: boolean
