@@ -125,6 +125,7 @@ const Navigation = () => {
         return [
           { icon: Home, label: t('home'), path: '/client-dashboard' },
           { icon: PlusCircle, label: t('postTask'), path: '/post-task' },
+          { icon: Search, label: 'Find Experts', path: '/find-experts' },
           { icon: CheckSquare, label: t('myTasks'), path: '/my-tasks' },
           { icon: CreditCard, label: t('payments'), path: '/payments' },
           { icon: User, label: t('profile'), path: '/profile' },
