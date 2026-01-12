@@ -20,6 +20,7 @@ const MyTasks = lazy(() => import("./pages/MyTasks"));
 const MyGigs = lazy(() => import("./pages/MyGigs"));
 const MyApplications = lazy(() => import("./pages/MyApplications"));
 const SavedTasks = lazy(() => import("./pages/SavedTasks"));
+const ExpertDiscovery = lazy(() => import("./pages/ExpertDiscovery"));
 const ClientDashboard = lazy(() => import("./pages/ClientDashboard"));
 const DoerDashboard = lazy(() => import("./pages/DoerDashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
@@ -83,6 +84,7 @@ const App = () => (
                   </ProtectedRoute>
                 } />
                 <Route path="/browse-tasks" element={<BrowseTasks />} />
+                <Route path="/find-experts" element={<ExpertDiscovery />} />
                 <Route path="/my-tasks" element={
                   <ProtectedRoute allowedRoles={['client']}>
                     <MyTasks />
