@@ -755,9 +755,12 @@ export type Database = {
         Row: {
           active_role: Database["public"]["Enums"]["user_role"]
           auth_user_id: string
+          availability: string | null
+          bio: string | null
           created_at: string
           deleted_at: string | null
           email: string
+          hourly_rate: number | null
           id: string
           language: Database["public"]["Enums"]["user_language"]
           name: string
@@ -770,9 +773,12 @@ export type Database = {
         Insert: {
           active_role: Database["public"]["Enums"]["user_role"]
           auth_user_id: string
+          availability?: string | null
+          bio?: string | null
           created_at?: string
           deleted_at?: string | null
           email: string
+          hourly_rate?: number | null
           id?: string
           language?: Database["public"]["Enums"]["user_language"]
           name: string
@@ -785,9 +791,12 @@ export type Database = {
         Update: {
           active_role?: Database["public"]["Enums"]["user_role"]
           auth_user_id?: string
+          availability?: string | null
+          bio?: string | null
           created_at?: string
           deleted_at?: string | null
           email?: string
+          hourly_rate?: number | null
           id?: string
           language?: Database["public"]["Enums"]["user_language"]
           name?: string

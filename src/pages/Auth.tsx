@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UserPlus, LogIn, Globe, Mail, CheckCircle, ArrowLeft, Sparkles, Brain } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
+import GoogleAuthButton from '@/components/auth/GoogleAuthButton';
 
 // Validation schemas
 const signupSchema = z.object({
@@ -642,6 +643,17 @@ const Auth = ({ defaultRole }: AuthProps) => {
                   <Button type="submit" className="w-full rounded-2xl" disabled={isLoading}>
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
+
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+
+                  <GoogleAuthButton mode="login" role={presetRole} />
                   
                   <div className="text-center">
                     <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
@@ -812,6 +824,17 @@ const Auth = ({ defaultRole }: AuthProps) => {
                   <Button type="submit" className="w-full rounded-2xl" disabled={isLoading}>
                     {isLoading ? 'Creating account...' : 'Create Account'}
                   </Button>
+
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Or</span>
+                    </div>
+                  </div>
+
+                  <GoogleAuthButton mode="signup" role={presetRole} />
                 </form>
               </CardContent>
             </Card>
