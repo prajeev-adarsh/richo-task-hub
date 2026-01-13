@@ -142,9 +142,17 @@ const ExpertDiscovery = () => {
         query = query.or(`hourly_rate.is.null,hourly_rate.lte.${maxRate}`);
       }
 
-      // Apply search filter
+      // Apply search filter with sanitization to prevent PostgREST filter injection
       if (searchQuery.trim()) {
-        query = query.or(`name.ilike.%${searchQuery}%,bio.ilike.%${searchQuery}%`);
+        // Sanitize input by removing PostgREST operators and special characters
+        // This prevents filter injection attacks via special chars like , ( ) [ ] < > = .
+        const sanitizedSearch = searchQuery.trim()
+          .replace(/[,()[\]<>=.%_\\]/g, '') // Remove PostgREST operators and SQL wildcards
+          .slice(0, 100); // Limit length to prevent DoS
+        
+        if (sanitizedSearch.length > 0) {
+          query = query.or(`name.ilike.%${sanitizedSearch}%,bio.ilike.%${sanitizedSearch}%`);
+        }
       }
 
       const { data: doers, error: doersError } = await query;
