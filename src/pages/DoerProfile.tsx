@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Briefcase, Award, Camera, Plus, Trash2, Loader2, CheckCircle2, Calendar, TrendingUp, Share2, Copy, MessageCircle, Check } from 'lucide-react';
+import { ArrowLeft, Star, Briefcase, Award, Camera, Plus, Trash2, Loader2, CheckCircle2, Calendar, TrendingUp, Share2, Copy, MessageCircle, Check, ChevronLeft, ChevronRight, Grid, Image } from 'lucide-react';
 import { SkillIcon } from '@/lib/skillIcons';
 import { OptimizedImage } from '@/components/ui/optimized-image';
 import { supabase } from '@/integrations/supabase/client';
@@ -92,6 +92,8 @@ const DoerProfile = () => {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [selectedImage, setSelectedImage] = useState<PortfolioItem | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
+  const [galleryView, setGalleryView] = useState<'grid' | 'carousel'>('grid');
   
   // Add portfolio dialog state
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -666,45 +668,171 @@ const DoerProfile = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {portfolio.map((item) => (
-                      <Card 
-                        key={item.id} 
-                        className="overflow-hidden group relative cursor-pointer hover:shadow-lg transition-shadow"
-                        onClick={() => setSelectedImage(item)}
-                      >
-                        <OptimizedImage
-                          src={item.image_url}
-                          alt={item.title}
-                          aspectRatio="video"
-                          className="w-full h-full group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <CardContent className="p-4">
-                          <h4 className="font-semibold">{item.title}</h4>
-                          {item.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{item.description}</p>
-                          )}
-                          {item.category && (
-                            <Badge variant="outline" className="mt-2 text-xs">
-                              {getCategoryLabel(item.category)}
-                            </Badge>
-                          )}
-                        </CardContent>
-                        {isOwner && (
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeletePortfolioItem(item.id);
+                  <div className="space-y-4">
+                    {/* View Toggle */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        {portfolio.length} work sample{portfolio.length !== 1 ? 's' : ''}
+                      </p>
+                      <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+                        <Button
+                          variant={galleryView === 'grid' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="h-8 px-3"
+                          onClick={() => setGalleryView('grid')}
+                        >
+                          <Grid className="h-4 w-4 mr-1.5" />
+                          Grid
+                        </Button>
+                        <Button
+                          variant={galleryView === 'carousel' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="h-8 px-3"
+                          onClick={() => setGalleryView('carousel')}
+                        >
+                          <Image className="h-4 w-4 mr-1.5" />
+                          Gallery
+                        </Button>
+                      </div>
+                    </div>
+
+                    {galleryView === 'grid' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {portfolio.map((item, index) => (
+                          <Card 
+                            key={item.id} 
+                            className="overflow-hidden group relative cursor-pointer hover:shadow-lg transition-shadow"
+                            onClick={() => {
+                              setSelectedImage(item);
+                              setSelectedImageIndex(index);
                             }}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            <OptimizedImage
+                              src={item.image_url}
+                              alt={item.title}
+                              aspectRatio="video"
+                              className="w-full h-full group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <CardContent className="p-4">
+                              <h4 className="font-semibold">{item.title}</h4>
+                              {item.description && (
+                                <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{item.description}</p>
+                              )}
+                              {item.category && (
+                                <Badge variant="outline" className="mt-2 text-xs">
+                                  {getCategoryLabel(item.category)}
+                                </Badge>
+                              )}
+                            </CardContent>
+                            {isOwner && (
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeletePortfolioItem(item.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Carousel Gallery View */
+                      <div className="relative">
+                        <div className="overflow-hidden rounded-xl">
+                          <div 
+                            className="relative aspect-video cursor-pointer"
+                            onClick={() => {
+                              setSelectedImage(portfolio[selectedImageIndex]);
+                            }}
+                          >
+                            <img
+                              src={portfolio[selectedImageIndex]?.image_url}
+                              alt={portfolio[selectedImageIndex]?.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                              <h3 className="text-xl font-bold">{portfolio[selectedImageIndex]?.title}</h3>
+                              {portfolio[selectedImageIndex]?.description && (
+                                <p className="text-sm text-white/80 mt-1 line-clamp-2">
+                                  {portfolio[selectedImageIndex]?.description}
+                                </p>
+                              )}
+                              {portfolio[selectedImageIndex]?.category && (
+                                <Badge variant="secondary" className="mt-2">
+                                  {getCategoryLabel(portfolio[selectedImageIndex]?.category || '')}
+                                </Badge>
+                              )}
+                            </div>
+                            {isOwner && (
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-4 right-4 h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeletePortfolioItem(portfolio[selectedImageIndex].id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Navigation Buttons */}
+                        {portfolio.length > 1 && (
+                          <>
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full shadow-lg"
+                              onClick={() => setSelectedImageIndex((prev) => 
+                                prev === 0 ? portfolio.length - 1 : prev - 1
+                              )}
+                            >
+                              <ChevronLeft className="h-5 w-5" />
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full shadow-lg"
+                              onClick={() => setSelectedImageIndex((prev) => 
+                                prev === portfolio.length - 1 ? 0 : prev + 1
+                              )}
+                            >
+                              <ChevronRight className="h-5 w-5" />
+                            </Button>
+                          </>
                         )}
-                      </Card>
-                    ))}
+
+                        {/* Thumbnail Strip */}
+                        <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
+                          {portfolio.map((item, index) => (
+                            <button
+                              key={item.id}
+                              className={`flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden ring-2 transition-all ${
+                                index === selectedImageIndex 
+                                  ? 'ring-primary ring-offset-2' 
+                                  : 'ring-transparent hover:ring-muted-foreground/30'
+                              }`}
+                              onClick={() => setSelectedImageIndex(index)}
+                            >
+                              <img
+                                src={item.image_url}
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -811,30 +939,72 @@ const DoerProfile = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Image Preview Dialog */}
+        {/* Image Preview Dialog with Navigation */}
         <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-4xl p-0 overflow-hidden">
             {selectedImage && (
-              <>
-                <DialogHeader>
-                  <DialogTitle>{selectedImage.title}</DialogTitle>
-                </DialogHeader>
-                <div className="mt-4">
+              <div className="relative">
+                {/* Close handled by DialogContent */}
+                <div className="relative">
                   <img
                     src={selectedImage.image_url}
                     alt={selectedImage.title}
-                    className="w-full rounded-lg"
+                    className="w-full max-h-[70vh] object-contain bg-black"
                   />
-                  {selectedImage.description && (
-                    <p className="mt-4 text-muted-foreground">{selectedImage.description}</p>
-                  )}
-                  {selectedImage.category && (
-                    <Badge variant="outline" className="mt-2">
-                      {getCategoryLabel(selectedImage.category)}
-                    </Badge>
+                  
+                  {/* Navigation Arrows */}
+                  {portfolio.length > 1 && (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 hover:bg-white shadow-lg"
+                        onClick={() => {
+                          const newIndex = selectedImageIndex === 0 ? portfolio.length - 1 : selectedImageIndex - 1;
+                          setSelectedImageIndex(newIndex);
+                          setSelectedImage(portfolio[newIndex]);
+                        }}
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 hover:bg-white shadow-lg"
+                        onClick={() => {
+                          const newIndex = selectedImageIndex === portfolio.length - 1 ? 0 : selectedImageIndex + 1;
+                          setSelectedImageIndex(newIndex);
+                          setSelectedImage(portfolio[newIndex]);
+                        }}
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </Button>
+                    </>
                   )}
                 </div>
-              </>
+                
+                {/* Details Section */}
+                <div className="p-6 bg-background">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold">{selectedImage.title}</h3>
+                      {selectedImage.description && (
+                        <p className="mt-2 text-muted-foreground">{selectedImage.description}</p>
+                      )}
+                      {selectedImage.category && (
+                        <Badge variant="outline" className="mt-3">
+                          {getCategoryLabel(selectedImage.category)}
+                        </Badge>
+                      )}
+                    </div>
+                    {portfolio.length > 1 && (
+                      <span className="text-sm text-muted-foreground">
+                        {selectedImageIndex + 1} / {portfolio.length}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
           </DialogContent>
         </Dialog>
