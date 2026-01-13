@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
+import { useToast } from '@/hooks/use-toast';
 import Navigation from '@/components/Navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { 
   Search, 
   Filter, 
@@ -22,7 +25,9 @@ import {
   MessageSquare,
   X,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Send,
+  Loader2
 } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -55,7 +60,8 @@ const AVAILABILITY_LABELS: Record<string, string> = {
 
 const ExpertDiscovery = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, role } = useUser();
+  const { isAuthenticated, role, user } = useUser();
+  const { toast } = useToast();
   const [experts, setExperts] = useState<Expert[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +73,12 @@ const ExpertDiscovery = () => {
   const [availability, setAvailability] = useState<string>('all');
   const [maxRate, setMaxRate] = useState<number>(200);
   const [minRating, setMinRating] = useState<number>(0);
+
+  // Contact expert state
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [selectedExpert, setSelectedExpert] = useState<Expert | null>(null);
+  const [contactMessage, setContactMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   useEffect(() => {
     fetchSkills();
@@ -227,11 +239,63 @@ const ExpertDiscovery = () => {
 
   const hasActiveFilters = selectedSkills.length > 0 || availability !== 'all' || maxRate < 200 || minRating > 0;
 
-  const handleContactExpert = (expertId: string) => {
+  const handleOpenContactDialog = (expert: Expert, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!isAuthenticated) {
       navigate('/auth/client');
       return;
     }
+    if (user?.id === expert.id) {
+      toast({ title: "You can't contact yourself", variant: 'destructive' });
+      return;
+    }
+    setSelectedExpert(expert);
+    setContactMessage('');
+    setContactDialogOpen(true);
+  };
+
+  const handleSendContactMessage = async () => {
+    if (!contactMessage.trim() || !selectedExpert || !user) {
+      toast({ title: 'Please enter a message', variant: 'destructive' });
+      return;
+    }
+
+    if (contactMessage.trim().length < 10) {
+      toast({ title: 'Message must be at least 10 characters', variant: 'destructive' });
+      return;
+    }
+
+    setSendingMessage(true);
+    try {
+      const { error } = await supabase.rpc('send_contact_message', {
+        p_doer_id: selectedExpert.id,
+        p_message: contactMessage.trim()
+      });
+
+      if (error) {
+        if (error.message.includes('Rate limit')) {
+          toast({ title: 'Too many messages', description: 'Please wait before sending more messages.', variant: 'destructive' });
+        } else if (error.message.includes('2 messages per day')) {
+          toast({ title: 'Daily limit reached', description: 'You can only send 2 messages per day to the same expert.', variant: 'destructive' });
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      toast({ title: 'Message sent!', description: `Your message was sent to ${selectedExpert.name}` });
+      setContactDialogOpen(false);
+      setContactMessage('');
+      setSelectedExpert(null);
+    } catch (error) {
+      logger.error('Error sending contact message:', error);
+      toast({ title: 'Failed to send message', variant: 'destructive' });
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleViewProfile = (expertId: string) => {
     navigate(`/doer/${expertId}`);
   };
 
@@ -427,7 +491,7 @@ const ExpertDiscovery = () => {
                 <Card 
                   key={expert.id} 
                   className="rounded-xl hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => handleContactExpert(expert.id)}
+                  onClick={() => handleViewProfile(expert.id)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
@@ -493,8 +557,14 @@ const ExpertDiscovery = () => {
                           </span>
                         )}
                       </div>
-                      <Button size="sm" variant="ghost" className="rounded-xl">
-                        <MessageSquare className="h-4 w-4" />
+                      <Button 
+                        size="sm" 
+                        variant="default" 
+                        className="rounded-xl"
+                        onClick={(e) => handleOpenContactDialog(expert, e)}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1.5" />
+                        Contact
                       </Button>
                     </div>
                   </CardContent>
@@ -503,6 +573,69 @@ const ExpertDiscovery = () => {
             </div>
           )}
         </div>
+
+        {/* Contact Expert Dialog */}
+        <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                {selectedExpert && (
+                  <>
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={selectedExpert.photo_url || undefined} alt={selectedExpert.name} />
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        {selectedExpert.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <span>Contact {selectedExpert.name}</span>
+                      {selectedExpert.avg_rating > 0 && (
+                        <p className="text-sm font-normal text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                          {selectedExpert.avg_rating.toFixed(1)} rating
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                Send a message to introduce yourself and discuss potential projects.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <Textarea
+                placeholder="Hi! I'm interested in working with you on a project. Could we discuss..."
+                value={contactMessage}
+                onChange={(e) => setContactMessage(e.target.value)}
+                className="min-h-[120px] resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Minimum 10 characters. You can send up to 2 messages per day to each expert.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setContactDialogOpen(false)}
+                  disabled={sendingMessage}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSendContactMessage}
+                  disabled={sendingMessage || contactMessage.trim().length < 10}
+                >
+                  {sendingMessage ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Send Message
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
