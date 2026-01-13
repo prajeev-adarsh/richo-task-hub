@@ -21,11 +21,18 @@ import { Calendar } from '@/components/ui/calendar';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 
+// Validation schema with length limits matching database constraints
 const taskSchema = z.object({
-  title: z.string().min(1, 'Task title is required'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
+  title: z.string()
+    .min(1, 'Task title is required')
+    .max(200, 'Task title must be 200 characters or less'),
+  description: z.string()
+    .min(10, 'Description must be at least 10 characters')
+    .max(5000, 'Description must be 5000 characters or less'),
   category: z.enum(['student', 'skilled', 'ai', 'custom']),
-  location: z.string().min(1, 'Location is required'),
+  location: z.string()
+    .min(1, 'Location is required')
+    .max(200, 'Location must be 200 characters or less'),
   is_remote: z.boolean().default(false),
   budget: z.number().min(1, 'Budget must be greater than 0'),
   deadline: z.date(),

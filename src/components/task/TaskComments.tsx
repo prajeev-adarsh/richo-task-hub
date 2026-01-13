@@ -86,8 +86,23 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId }) => {
     };
   };
 
+  // Maximum comment length matching database constraint
+  const MAX_COMMENT_LENGTH = 2000;
+
   const handleSubmitComment = async () => {
     if (!user || !newComment.trim()) return;
+
+    const trimmedComment = newComment.trim();
+    
+    // Client-side validation matching database constraint
+    if (trimmedComment.length > MAX_COMMENT_LENGTH) {
+      toast({
+        title: "Error",
+        description: `Comment must be ${MAX_COMMENT_LENGTH} characters or less`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -96,7 +111,7 @@ const TaskComments: React.FC<TaskCommentsProps> = ({ taskId }) => {
         .insert({
           task_id: taskId,
           user_id: user.id,
-          content: newComment.trim()
+          content: trimmedComment
         });
 
       if (error) throw error;
