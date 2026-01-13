@@ -1,3 +1,25 @@
+/**
+ * ProtectedRoute - Client-side navigation guard component
+ * 
+ * SECURITY NOTICE:
+ * ================
+ * This component provides UI-ONLY access control for user experience purposes.
+ * These client-side checks are NOT a security boundary and should NEVER be relied 
+ * upon for actual authorization.
+ * 
+ * All actual security enforcement happens server-side through:
+ * 1. Row Level Security (RLS) policies in Supabase
+ * 2. Server-side role validation in RPC functions (has_role(), soft_delete_user, etc.)
+ * 3. Database policies that independently verify user roles
+ * 
+ * The client-side checks here only serve to:
+ * - Prevent UI confusion by redirecting users to appropriate dashboards
+ * - Improve UX by not showing inaccessible routes
+ * - Reduce unnecessary API calls to resources users can't access anyway
+ * 
+ * Never trust client-side role claims for data access - all data access is 
+ * protected by server-side RLS policies.
+ */
 import { ReactNode, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@/components/UserContext';
@@ -20,13 +42,14 @@ export const ProtectedRoute = ({
   useEffect(() => {
     if (isLoading) return;
 
-    // Check authentication
+    // UI-ONLY authentication check - server-side RLS enforces actual auth
     if (requireAuth && !isAuthenticated) {
       navigate('/auth');
       return;
     }
 
-    // Check role authorization
+    // UI-ONLY role check - server-side RLS policies enforce actual authorization
+    // This redirect is purely for UX to guide users to their appropriate dashboard
     if (allowedRoles && user && !allowedRoles.includes(user.role)) {
       // Redirect to appropriate dashboard based on user role
       switch (user.role) {
@@ -59,7 +82,7 @@ export const ProtectedRoute = ({
     );
   }
 
-  // Show nothing if redirecting
+  // Show nothing if redirecting (actual data access is protected by server-side RLS)
   if (requireAuth && !isAuthenticated) return null;
   if (allowedRoles && user && !allowedRoles.includes(user.role)) return null;
 
