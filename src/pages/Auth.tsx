@@ -282,6 +282,7 @@ const Auth = ({ defaultRole }: AuthProps) => {
         logger.info('User created, creating profile...', data.user.id);
         
         // Create user profile with trimmed and validated data
+        // Note: The user_roles entry is created automatically by a database trigger
         const { error: profileError } = await supabase
           .from('users')
           .insert({
@@ -299,22 +300,9 @@ const Auth = ({ defaultRole }: AuthProps) => {
           throw profileError;
         }
 
-        // Add role to user_roles table
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: data.user.id,
-            role: signupData.role,
-          });
-
-        if (roleError) {
-          logger.error('Role creation error:', roleError);
-          throw roleError;
-        }
-
-        logger.info('Profile and role created successfully');
+        logger.info('Profile created successfully (role added via trigger)');
         
-        // Show email verification screen instead of redirecting
+        // Show email verification screen
         setVerificationEmail(signupData.email.trim());
         setShowVerificationScreen(true);
       }

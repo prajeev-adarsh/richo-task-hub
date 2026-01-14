@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { MapPin, Calendar, IndianRupee, Filter, Search, X, ChevronDown, ChevronUp, Clock, Bookmark } from 'lucide-react';
@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import Navigation from '@/components/Navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Task {
   id: string;
@@ -58,12 +59,10 @@ const SORT_OPTIONS = [
 
 const BrowseTasks = () => {
   const navigate = useNavigate();
-  const { user, role } = useUser();
+  const { user, role, isLoading: isUserLoading } = useUser();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { toggleSaveTask, isTaskSaved, savedTaskIds } = useSavedTasks();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [applications, setApplications] = useState<TaskApplication[]>([]);
-  const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
 
   // Search & Filters
@@ -81,15 +80,10 @@ const BrowseTasks = () => {
 
   const isDoer = role === 'doer';
 
-  useEffect(() => {
-    fetchTasks();
-    if (user) {
-      fetchApplications();
-    }
-  }, [user]);
-
-  const fetchTasks = async () => {
-    try {
+  // Fetch tasks with React Query
+  const { data: tasks = [], isLoading: isTasksLoading } = useQuery({
+    queryKey: ['tasks', 'open'],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
@@ -98,34 +92,27 @@ const BrowseTasks = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setTasks(data || []);
-    } catch (error) {
-      logger.error('Error fetching tasks:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load tasks",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data as Task[];
+    },
+  });
 
-  const fetchApplications = async () => {
-    if (!user) return;
-
-    try {
+  // Fetch applications with React Query
+  const { data: applications = [] } = useQuery({
+    queryKey: ['applications', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
       const { data, error } = await supabase
         .from('task_applications')
         .select('task_id')
         .eq('doer_id', user.id);
-
+      
       if (error) throw error;
-      setApplications(data || []);
-    } catch (error) {
-      logger.error('Error fetching applications:', error);
-    }
-  };
+      return data as TaskApplication[];
+    },
+    enabled: !!user?.id,
+  });
+
+  const loading = isTasksLoading || isUserLoading;
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -139,7 +126,7 @@ const BrowseTasks = () => {
   const hasActiveFilters = searchQuery || categoryFilter || remoteFilter !== null || 
     budgetRange[0] > 0 || budgetRange[1] < 100000 || locationFilter;
 
-  const filteredAndSortedTasks = React.useMemo(() => {
+  const filteredAndSortedTasks = useMemo(() => {
     let result = tasks.filter(task => {
       // Text search in title and description
       if (searchQuery) {
@@ -193,7 +180,16 @@ const BrowseTasks = () => {
   };
 
   const handleApply = async () => {
-    if (!user || !selectedTask) return;
+    if (!user?.id) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to apply for tasks",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!selectedTask) return;
 
     setApplying(selectedTask.id);
     try {
@@ -211,7 +207,8 @@ const BrowseTasks = () => {
         description: "Your application has been sent to the client",
       });
 
-      setApplications(prev => [...prev, { task_id: selectedTask.id }]);
+      // Invalidate applications query to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['applications', user.id] });
       setShowApplyModal(false);
     } catch (error) {
       logger.error('Error applying to task:', error);
