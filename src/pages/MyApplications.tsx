@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { FileText, Clock, CheckCircle, XCircle, MapPin, IndianRupee, Calendar, Filter } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, MapPin, IndianRupee, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Navigation from '@/components/Navigation';
+import { useQuery } from '@tanstack/react-query';
 
 interface Application {
   id: string;
@@ -58,72 +59,65 @@ const STATUS_CONFIG = {
 
 const MyApplications = () => {
   const navigate = useNavigate();
-  const { user } = useUser();
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoading: isUserLoading } = useUser();
   const [activeTab, setActiveTab] = useState('all');
 
-  useEffect(() => {
-    const fetchApplications = async () => {
-      if (!user?.id) return;
+  // Fetch applications with React Query
+  const { data: applications = [], isLoading: isApplicationsLoading } = useQuery({
+    queryKey: ['my-applications', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
 
-      try {
-        const { data, error } = await supabase
-          .from('task_applications')
-          .select(`
+      const { data, error } = await supabase
+        .from('task_applications')
+        .select(`
+          id,
+          task_id,
+          status,
+          applied_at,
+          tasks!task_applications_task_id_fkey (
             id,
-            task_id,
+            title,
+            description,
+            category,
+            location,
+            is_remote,
+            budget,
+            deadline,
             status,
-            applied_at,
-            tasks!task_applications_task_id_fkey (
-              id,
-              title,
-              description,
-              category,
-              location,
-              is_remote,
-              budget,
-              deadline,
-              status,
-              users!tasks_client_id_fkey (
-                name
-              )
+            users!tasks_client_id_fkey (
+              name
             )
-          `)
-          .eq('doer_id', user.id)
-          .order('applied_at', { ascending: false });
+          )
+        `)
+        .eq('doer_id', user.id)
+        .order('applied_at', { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        const formattedApplications = (data || []).map((app: any) => ({
-          id: app.id,
-          task_id: app.task_id,
-          status: app.status,
-          applied_at: app.applied_at,
-          task: {
-            id: app.tasks.id,
-            title: app.tasks.title,
-            description: app.tasks.description,
-            category: app.tasks.category,
-            location: app.tasks.location,
-            is_remote: app.tasks.is_remote,
-            budget: app.tasks.budget,
-            deadline: app.tasks.deadline,
-            status: app.tasks.status,
-            client: app.tasks.users,
-          },
-        }));
+      return (data || []).map((app: any) => ({
+        id: app.id,
+        task_id: app.task_id,
+        status: app.status,
+        applied_at: app.applied_at,
+        task: {
+          id: app.tasks.id,
+          title: app.tasks.title,
+          description: app.tasks.description,
+          category: app.tasks.category,
+          location: app.tasks.location,
+          is_remote: app.tasks.is_remote,
+          budget: app.tasks.budget,
+          deadline: app.tasks.deadline,
+          status: app.tasks.status,
+          client: app.tasks.users,
+        },
+      })) as Application[];
+    },
+    enabled: !!user?.id,
+  });
 
-        setApplications(formattedApplications);
-      } catch (error) {
-        logger.error('Error fetching applications:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchApplications();
-  }, [user?.id]);
+  const loading = isApplicationsLoading || isUserLoading;
 
   const filteredApplications = applications.filter((app) => {
     if (activeTab === 'all') return true;
