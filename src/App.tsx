@@ -83,7 +83,11 @@ const App = () => (
                     <PostTask />
                   </ProtectedRoute>
                 } />
-                <Route path="/browse-tasks" element={<BrowseTasks />} />
+                <Route path="/browse-tasks" element={
+                  <ProtectedRoute allowedRoles={['doer']}>
+                    <BrowseTasks />
+                  </ProtectedRoute>
+                } />
                 <Route path="/find-experts" element={<ExpertDiscovery />} />
                 <Route path="/my-tasks" element={
                   <ProtectedRoute allowedRoles={['client']}>
