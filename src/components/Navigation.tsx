@@ -75,7 +75,14 @@ const Navigation = () => {
         description: `You are now viewing as ${newRole}`,
       });
 
-      // Redirect to appropriate dashboard
+      // Force refresh user context by re-fetching profile
+      const { data: updatedProfile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', user?.auth_user_id)
+        .single();
+      
+      // Redirect to appropriate dashboard (context will update on next render)
       switch (newRole) {
         case 'client':
           navigate('/client-dashboard');
@@ -87,11 +94,6 @@ const Navigation = () => {
           navigate('/admin-dashboard');
           break;
       }
-
-      // Refresh the page to update context
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
     } catch (error: any) {
       logger.error('Error switching role:', error);
       toast({

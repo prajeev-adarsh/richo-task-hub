@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -47,53 +49,11 @@ const AuthCallback = () => {
             }
           }
         } else {
-          // New user - create profile
-          const pendingRole = localStorage.getItem('pending_oauth_role') as 'client' | 'doer' | null;
-          const role = pendingRole || 'client';
-          localStorage.removeItem('pending_oauth_role');
-
-          // Get user metadata from OAuth provider
-          const userEmail = session.user.email || '';
-          const userName = session.user.user_metadata?.full_name || 
-                          session.user.user_metadata?.name || 
-                          userEmail.split('@')[0];
-
-          // Create user profile
-          const { error: profileError } = await supabase
-            .from('users')
-            .insert({
-              auth_user_id: session.user.id,
-              name: userName,
-              email: userEmail.toLowerCase(),
-              role: role,
-              active_role: role,
-              photo_url: session.user.user_metadata?.avatar_url || null,
-            });
-
-          if (profileError) {
-            logger.error('Profile creation error:', profileError);
-            throw profileError;
-          }
-
-          // Add role to user_roles table
-          const { error: roleError } = await supabase
-            .from('user_roles')
-            .insert({
-              user_id: session.user.id,
-              role: role,
-            });
-
-          if (roleError) {
-            logger.error('Role creation error:', roleError);
-            // Don't throw - profile was created successfully
-          }
-
-          // Redirect to onboarding
-          if (role === 'doer') {
-            navigate('/onboarding/expert');
-          } else {
-            navigate('/onboarding/client');
-          }
+          // New user via OAuth - but Google auth is disabled
+          // Sign out and redirect to auth page
+          await supabase.auth.signOut();
+          setError('Social login is currently disabled. Please sign up with email and password.');
+          setTimeout(() => navigate('/auth'), 3000);
         }
       } catch (err: any) {
         logger.error('Auth callback error:', err);
@@ -107,12 +67,18 @@ const AuthCallback = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-destructive mb-2">Authentication Error</p>
-          <p className="text-muted-foreground text-sm">{error}</p>
-          <p className="text-muted-foreground text-sm mt-4">Redirecting to login...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center">
+            <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Authentication Error</h3>
+            <p className="text-muted-foreground text-sm mb-4">{error}</p>
+            <p className="text-muted-foreground text-sm mb-4">Redirecting to login...</p>
+            <Button onClick={() => navigate('/auth')} variant="outline">
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

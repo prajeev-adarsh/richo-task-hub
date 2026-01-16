@@ -81,7 +81,7 @@ const BrowseTasks = () => {
   const isDoer = role === 'doer';
 
   // Fetch tasks with React Query
-  const { data: tasks = [], isLoading: isTasksLoading } = useQuery({
+  const { data: tasks = [], isLoading: isTasksLoading, isError: isTasksError, error: tasksError } = useQuery({
     queryKey: ['tasks', 'open'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -94,6 +94,8 @@ const BrowseTasks = () => {
       if (error) throw error;
       return data as Task[];
     },
+    enabled: !!user?.id, // Only fetch when user is logged in
+    retry: 1,
   });
 
   // Fetch applications with React Query
@@ -255,6 +257,29 @@ const BrowseTasks = () => {
             </div>
             <p className="text-muted-foreground">Loading tasks...</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isTasksError) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center h-[60vh]">
+          <Card className="max-w-md">
+            <CardContent className="p-8 text-center">
+              <Search className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Failed to load tasks</h3>
+              <p className="text-muted-foreground mb-4">
+                {(tasksError as Error)?.message || 'Something went wrong. Please try again.'}
+              </p>
+              <Button onClick={() => window.location.reload()}>
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
