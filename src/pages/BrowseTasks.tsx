@@ -227,8 +227,17 @@ const BrowseTasks = () => {
     setShowApplyModal(true);
   };
 
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return 'N/A';
+    return format(d, 'MMM dd, yyyy');
+  };
+
   const getDaysRemaining = (deadline: string) => {
-    const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const deadlineDate = new Date(deadline);
+    if (Number.isNaN(deadlineDate.getTime())) return 'No deadline';
+
+    const days = Math.ceil((deadlineDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     if (days < 0) return 'Overdue';
     if (days === 0) return 'Due today';
     if (days === 1) return '1 day left';
@@ -472,7 +481,7 @@ const BrowseTasks = () => {
 
                       <div className="flex items-center gap-2 text-sm">
                         <Calendar className="h-4 w-4 text-orange-600" />
-                        <span>{format(new Date(task.deadline), 'MMM dd, yyyy')}</span>
+                        <span>{formatDate(task.deadline)}</span>
                         <Badge 
                           variant={isUrgent ? "destructive" : "outline"} 
                           className="text-xs ml-auto"
@@ -542,7 +551,7 @@ const BrowseTasks = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Deadline:</span>
-                    <span>{format(new Date(selectedTask.deadline), 'MMM dd, yyyy')}</span>
+                    <span>{formatDate(selectedTask.deadline)}</span>
                   </div>
                 </div>
               </div>

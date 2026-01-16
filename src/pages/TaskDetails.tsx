@@ -69,6 +69,26 @@ const TaskDetails = () => {
     }
   }, [id, user]);
 
+  // Keep applicant count + application status in sync without needing a manual refresh
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`task-${id}-applications`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'task_applications', filter: `task_id=eq.${id}` },
+        () => {
+          fetchTaskDetails();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
+
   const fetchTaskDetails = async () => {
     if (!id) return;
 
@@ -157,6 +177,12 @@ const TaskDetails = () => {
     } finally {
       setApplying(false);
     }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return 'N/A';
+    return format(d, 'MMM dd, yyyy');
   };
 
   const getStatusColor = (status: string) => {
@@ -292,11 +318,11 @@ const TaskDetails = () => {
                       <Calendar className="h-5 w-5 text-orange-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">Deadline</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(task.deadline), 'MMM dd, yyyy')}
-                      </p>
-                    </div>
+                        <p className="text-sm font-medium">Deadline</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDate(task.deadline)}
+                        </p>
+                      </div>
                   </div>
 
                   <div className="flex items-center gap-3">
@@ -328,7 +354,7 @@ const TaskDetails = () => {
                     <div>
                       <p className="text-sm font-medium">Posted</p>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(task.created_at), 'MMM dd, yyyy')}
+                        {formatDate(task.created_at)}
                       </p>
                     </div>
                   </div>

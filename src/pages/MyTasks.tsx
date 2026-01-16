@@ -165,18 +165,38 @@ const MyTasks = () => {
         .order('applied_at', { ascending: false });
 
       if (error) throw error;
-      setApplications(data || []);
-    } catch (error) {
-      logger.error('Error fetching applications:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load applications",
-        variant: "destructive",
-      });
-    }
-  };
+       setApplications(data || []);
+     } catch (error) {
+       logger.error('Error fetching applications:', error);
+       toast({
+         title: "Error",
+         description: "Failed to load applications",
+         variant: "destructive",
+       });
+     }
+   };
 
-  const fetchProofSubmissions = async () => {
+   // Live update applications list while the modal is open
+   useEffect(() => {
+     if (!showApplicationsModal || !selectedTask) return;
+
+     const channel = supabase
+       .channel(`task-${selectedTask.id}-applications`)
+       .on(
+         'postgres_changes',
+         { event: '*', schema: 'public', table: 'task_applications', filter: `task_id=eq.${selectedTask.id}` },
+         () => {
+           fetchApplications(selectedTask.id);
+         }
+       )
+       .subscribe();
+
+     return () => {
+       supabase.removeChannel(channel);
+     };
+   }, [showApplicationsModal, selectedTask?.id]);
+
+   const fetchProofSubmissions = async () => {
     if (!user || tasks.length === 0) return;
 
     try {
