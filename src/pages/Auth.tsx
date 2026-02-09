@@ -77,10 +77,7 @@ const Auth = ({ defaultRole }: AuthProps) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-  // Email verification state
-  const [showVerificationScreen, setShowVerificationScreen] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState('');
-  const [isResendingEmail, setIsResendingEmail] = useState(false);
+  // Email verification state removed - auto-login after signup
 
   // Signup form state
   const [signupData, setSignupData] = useState({
@@ -302,9 +299,40 @@ const Auth = ({ defaultRole }: AuthProps) => {
 
         logger.info('Profile created successfully (role added via trigger)');
         
-        // Show email verification screen
-        setVerificationEmail(signupData.email.trim());
-        setShowVerificationScreen(true);
+        // Auto-login and redirect (no email verification)
+        if (data.session) {
+          toast({
+            title: "✅ Account created!",
+            description: "Welcome to Richo!",
+          });
+          const activeRole = signupData.role;
+          if (activeRole === 'client') navigate('/client-dashboard');
+          else if (activeRole === 'doer') navigate('/doer-dashboard');
+          else navigate('/');
+        } else {
+          // Session not available yet, sign in manually
+          const { error: loginError } = await supabase.auth.signInWithPassword({
+            email: signupData.email.trim(),
+            password: signupData.password,
+          });
+          if (loginError) {
+            toast({
+              title: "Account created",
+              description: "Please log in with your credentials.",
+            });
+            setLoginEmail(signupData.email.trim());
+            setActiveTab('login');
+          } else {
+            toast({
+              title: "✅ Account created!",
+              description: "Welcome to Richo!",
+            });
+            const activeRole = signupData.role;
+            if (activeRole === 'client') navigate('/client-dashboard');
+            else if (activeRole === 'doer') navigate('/doer-dashboard');
+            else navigate('/');
+          }
+        }
       }
     } catch (error: any) {
       logger.error('Signup error:', error);
@@ -332,33 +360,7 @@ const Auth = ({ defaultRole }: AuthProps) => {
     }
   };
 
-  const handleResendVerificationEmail = async () => {
-    setIsResendingEmail(true);
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: verificationEmail,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth`,
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Email sent!",
-        description: "A new verification email has been sent to your inbox.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Failed to resend",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsResendingEmail(false);
-    }
-  };
+  // Email resend removed - no verification needed
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -426,67 +428,7 @@ const Auth = ({ defaultRole }: AuthProps) => {
   const roleContent = getRoleContent();
   const RoleIcon = roleContent.icon;
 
-  // Email verification screen
-  if (showVerificationScreen) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card className="rounded-2xl text-center">
-            <CardHeader className="pb-4">
-              <div className="w-20 h-20 bg-success/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <CheckCircle className="h-10 w-10 text-success" />
-              </div>
-              <CardTitle className="text-2xl">Check Your Email</CardTitle>
-              <CardDescription className="text-base mt-2">
-                We've sent a verification link to:
-              </CardDescription>
-              <p className="font-semibold text-foreground mt-2">{verificationEmail}</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Click the link in the email to verify your account. 
-                Once verified, you can log in and start using Richo.
-              </p>
-              
-              <div className="pt-4 space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full rounded-2xl"
-                  onClick={handleResendVerificationEmail}
-                  disabled={isResendingEmail}
-                >
-                  {isResendingEmail ? 'Sending...' : "Didn't receive it? Resend Email"}
-                </Button>
-                
-                <Button
-                  className="w-full rounded-2xl"
-                  onClick={() => {
-                    setShowVerificationScreen(false);
-                    setLoginEmail(verificationEmail);
-                    setActiveTab('login');
-                  }}
-                >
-                  Already verified? Login here
-                </Button>
-              </div>
-
-              <div className="pt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/')}
-                  className="text-muted-foreground"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  // Email verification screen removed - auto-login after signup
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
