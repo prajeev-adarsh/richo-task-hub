@@ -901,6 +901,22 @@ export type Database = {
         Returns: string
       }
       sanitize_notification_text: { Args: { p_text: string }; Returns: string }
+      search_experts: {
+        Args: {
+          p_availability?: string
+          p_max_rate?: number
+          p_search?: string
+        }
+        Returns: {
+          availability: string
+          bio: string
+          hourly_rate: number
+          id: string
+          name: string
+          photo_url: string
+          skills: Json
+        }[]
+      }
       send_contact_message: {
         Args: { p_doer_id: string; p_message: string }
         Returns: string

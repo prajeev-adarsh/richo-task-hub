@@ -109,57 +109,26 @@ const ExpertDiscovery = () => {
   const fetchExperts = async () => {
     setLoading(true);
     try {
-      // Get all doers with their skills
-      let query = supabase
-        .from('users')
-        .select(`
-          id,
-          name,
-          photo_url,
-          bio,
-          availability,
-          hourly_rate,
-          doer_skills (
-            skill_id,
-            skills (
-              id,
-              name,
-              category
-            )
-          )
-        `)
-        .eq('active_role', 'doer')
-        .eq('onboarding_completed', true)
-        .is('deleted_at', null);
-
-      // Apply availability filter
-      if (availability !== 'all') {
-        query = query.eq('availability', availability);
-      }
-
-      // Apply max rate filter
-      if (maxRate < 200) {
-        query = query.or(`hourly_rate.is.null,hourly_rate.lte.${maxRate}`);
-      }
-
-      // Apply search filter with sanitization to prevent PostgREST filter injection
+      // Sanitize search input
+      let sanitizedSearch: string | null = null;
       if (searchQuery.trim()) {
-        // Sanitize input by removing PostgREST operators and special characters
-        // This prevents filter injection attacks via special chars like , ( ) [ ] < > = .
-        const sanitizedSearch = searchQuery.trim()
-          .replace(/[,()[\]<>=.%_\\]/g, '') // Remove PostgREST operators and SQL wildcards
-          .slice(0, 100); // Limit length to prevent DoS
-        
-        if (sanitizedSearch.length > 0) {
-          query = query.or(`name.ilike.%${sanitizedSearch}%,bio.ilike.%${sanitizedSearch}%`);
-        }
+        sanitizedSearch = searchQuery.trim()
+          .replace(/[,()[\]<>=.%_\\]/g, '')
+          .slice(0, 100);
+        if (sanitizedSearch.length === 0) sanitizedSearch = null;
       }
 
-      const { data: doers, error: doersError } = await query;
+      // Use secure RPC that doesn't expose PII
+      const { data: doers, error: doersError } = await supabase.rpc('search_experts', {
+        p_search: sanitizedSearch,
+        p_availability: availability !== 'all' ? availability : null,
+        p_max_rate: maxRate < 200 ? maxRate : null,
+      });
+
       if (doersError) throw doersError;
 
       // Get ratings for all doers
-      const doerIds = (doers || []).map(d => d.id);
+      const doerIds = (doers || []).map((d: any) => d.id);
       const { data: ratings, error: ratingsError } = await supabase
         .from('ratings')
         .select('to_user, stars')
@@ -175,18 +144,16 @@ const ExpertDiscovery = () => {
         .eq('status', 'completed');
 
       if (tasksError) throw tasksError;
-
-      // Build expert data
-      const expertData: Expert[] = (doers || []).map(doer => {
+      // Build expert data - skills come from RPC as JSON
+      const expertData: Expert[] = (doers || []).map((doer: any) => {
         const doerRatings = (ratings || []).filter(r => r.to_user === doer.id);
         const avgRating = doerRatings.length > 0
           ? doerRatings.reduce((sum, r) => sum + r.stars, 0) / doerRatings.length
           : 0;
         const completedTasks = (taskCounts || []).filter(t => t.doer_id === doer.id).length;
 
-        const expertSkills = (doer.doer_skills || [])
-          .map((ds: any) => ds.skills)
-          .filter(Boolean);
+        // Skills already come as JSON array from the RPC
+        const expertSkills = Array.isArray(doer.skills) ? doer.skills : [];
 
         return {
           id: doer.id,
