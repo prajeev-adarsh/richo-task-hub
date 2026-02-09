@@ -63,31 +63,31 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
 
   const fetchApplicants = async () => {
     try {
-      // Fetch applications with basic doer info
+      // Fetch applications without FK join on users (RLS restricted)
       const { data, error } = await supabase
         .from('task_applications')
-        .select(`
-          *,
-          doer:users!task_applications_doer_id_fkey(id, name, photo_url)
-        `)
+        .select('*')
         .eq('task_id', taskId)
         .order('applied_at', { ascending: false });
 
       if (error) throw error;
 
-      // Fetch profiles for all doers
+      // Fetch profiles for all doers via secure RPC
       const doerIds = (data || []).map(a => a.doer_id);
       const profilesMap: Record<string, DoerProfile> = {};
+      const publicProfilesMap: Record<string, { id: string; name: string; photo_url: string | null }> = {};
 
       if (doerIds.length > 0) {
         const { data: profiles } = await supabase.rpc('get_public_profiles', { _user_ids: doerIds });
+        (profiles || []).forEach((p: any) => {
+          publicProfilesMap[p.id] = { id: p.id, name: p.name, photo_url: p.photo_url };
+        });
         
         // Also fetch detailed profile for each
         for (const doerId of doerIds) {
           const { data: profileData } = await supabase.rpc('get_doer_profile', { _user_id: doerId });
           if (profileData && profileData.length > 0) {
             const raw = profileData[0];
-            // Parse skills from JSON
             const rawSkills = raw.skills;
             const skills: SkillData[] = Array.isArray(rawSkills) 
               ? (rawSkills as unknown as SkillData[])
@@ -107,6 +107,7 @@ const ApplicantsList: React.FC<ApplicantsListProps> = ({ taskId, onAssign }) => 
 
       const enrichedApplicants = (data || []).map(applicant => ({
         ...applicant,
+        doer: publicProfilesMap[applicant.doer_id] || { id: applicant.doer_id, name: 'Unknown', photo_url: null },
         profile: profilesMap[applicant.doer_id] || null,
       }));
 

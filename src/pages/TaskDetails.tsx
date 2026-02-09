@@ -93,19 +93,31 @@ const TaskDetails = () => {
     if (!id) return;
 
     try {
-      // Fetch task with related data (only fetch non-sensitive user fields)
+      // Fetch task without user joins (RLS restricts direct user access)
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          client:users!tasks_client_id_fkey(id, name, photo_url),
-          doer:users!tasks_doer_id_fkey(id, name, photo_url)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 
       if (taskError) throw taskError;
-      setTask(taskData);
+
+      // Fetch public profiles for client and doer via secure RPC
+      const userIds = [taskData.client_id, taskData.doer_id].filter(Boolean) as string[];
+      const { data: profiles } = await supabase.rpc('get_public_profiles', { _user_ids: userIds });
+
+      const profileMap: Record<string, { id: string; name: string; photo_url: string | null }> = {};
+      (profiles || []).forEach((p: any) => {
+        profileMap[p.id] = { id: p.id, name: p.name, photo_url: p.photo_url };
+      });
+
+      const enrichedTask = {
+        ...taskData,
+        client: profileMap[taskData.client_id] || { id: taskData.client_id, name: 'Unknown', photo_url: null },
+        doer: taskData.doer_id ? (profileMap[taskData.doer_id] || { id: taskData.doer_id, name: 'Unknown', photo_url: null }) : undefined,
+      };
+
+      setTask(enrichedTask);
 
       // Fetch applicant count
       const { count } = await supabase
