@@ -10,6 +10,7 @@ interface TaskActionButtonsProps {
   isAssignedDoer: boolean;
   hasApplied: boolean;
   applicationStatus?: string;
+  applying?: boolean;
   onViewApplicants?: () => void;
   onSubmitProof?: () => void;
   onViewProof?: () => void;
@@ -27,6 +28,7 @@ const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
   isAssignedDoer,
   hasApplied,
   applicationStatus,
+  applying = false,
   onViewApplicants,
   onSubmitProof,
   onViewProof,
@@ -149,8 +151,9 @@ const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
               className="w-full"
               size="lg"
               onClick={onApply}
+              disabled={applying}
             >
-              Apply for this Task
+              {applying ? 'Applying...' : 'Apply for this Task'}
             </Button>
           </CardContent>
         </Card>

@@ -149,6 +149,7 @@ const TaskDetails = () => {
 
   const handleApply = async () => {
     if (!user || !task) return;
+    if (applying) return; // Prevent double-click
 
     setApplying(true);
     try {
@@ -159,7 +160,18 @@ const TaskDetails = () => {
           doer_id: user.id,
         });
 
-      if (error) throw error;
+      if (error) {
+        // Handle duplicate application gracefully
+        if (error.code === '23505') {
+          toast({
+            title: "Already Applied",
+            description: "You have already applied for this task",
+          });
+          fetchTaskDetails();
+          return;
+        }
+        throw error;
+      }
 
       toast({
         title: "✅ Application submitted!",
@@ -167,11 +179,11 @@ const TaskDetails = () => {
       });
 
       fetchTaskDetails();
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error applying:', error);
       toast({
         title: "Error",
-        description: "Failed to submit application",
+        description: error?.message || "Failed to submit application",
         variant: "destructive",
       });
     } finally {
@@ -376,6 +388,7 @@ const TaskDetails = () => {
               isAssignedDoer={isAssignedDoer}
               hasApplied={hasApplied}
               applicationStatus={application?.status}
+              applying={applying}
               onViewApplicants={() => setShowApplicantsModal(true)}
               onApply={handleApply}
               onOpenChat={() => navigate(`/chat/${task.id}`)}
