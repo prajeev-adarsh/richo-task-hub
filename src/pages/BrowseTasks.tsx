@@ -359,12 +359,12 @@ const BrowseTasks = () => {
                   {/* Category */}
                   <div className="space-y-2">
                     <Label>Category</Label>
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <Select value={categoryFilter || "all"} onValueChange={(v) => setCategoryFilter(v === "all" ? "" : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="All categories" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All categories</SelectItem>
+                        <SelectItem value="all">All categories</SelectItem>
                         {CATEGORIES.map(cat => (
                           <SelectItem key={cat.value} value={cat.value}>
                             {cat.label}
