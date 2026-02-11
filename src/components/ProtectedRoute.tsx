@@ -20,8 +20,8 @@
  * Never trust client-side role claims for data access - all data access is 
  * protected by server-side RLS policies.
  */
-import { ReactNode, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useUser } from '@/components/UserContext';
 import { UserRole } from '@/components/UserContext';
 
@@ -31,60 +31,50 @@ interface ProtectedRouteProps {
   requireAuth?: boolean;
 }
 
-export const ProtectedRoute = ({ 
-  children, 
-  allowedRoles, 
-  requireAuth = true 
+const PageLoader = ({ message = 'Loading...' }: { message?: string }) => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <span className="text-white font-bold text-2xl">R</span>
+      </div>
+      <p className="text-muted-foreground">{message}</p>
+    </div>
+  </div>
+);
+
+export const ProtectedRoute = ({
+  children,
+  allowedRoles,
+  requireAuth = true,
 }: ProtectedRouteProps) => {
   const { user, isAuthenticated, isLoading } = useUser();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    // UI-ONLY authentication check - server-side RLS enforces actual auth
-    if (requireAuth && !isAuthenticated) {
-      navigate('/auth');
-      return;
-    }
-
-    // UI-ONLY role check - server-side RLS policies enforce actual authorization
-    // This redirect is purely for UX to guide users to their appropriate dashboard
-    if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-      // Redirect to appropriate dashboard based on user role
-      switch (user.role) {
-        case 'client':
-          navigate('/client-dashboard');
-          break;
-        case 'doer':
-          navigate('/doer-dashboard');
-          break;
-        case 'admin':
-          navigate('/admin-dashboard');
-          break;
-        default:
-          navigate('/');
-      }
-    }
-  }, [isAuthenticated, user, isLoading, requireAuth, allowedRoles, navigate]);
 
   // Show loading state
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">R</span>
-          </div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
-  // Show nothing if redirecting (actual data access is protected by server-side RLS)
-  if (requireAuth && !isAuthenticated) return null;
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) return null;
+  // UI-ONLY authentication check - server-side RLS enforces actual auth
+  if (requireAuth && !isAuthenticated) {
+    // Render a real redirect instead of returning null (prevents blank white screen)
+    return <Navigate to="/auth" replace />;
+  }
+
+  // UI-ONLY role check - server-side RLS policies enforce actual authorization
+  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // Redirect to appropriate dashboard based on user role (UX only)
+    const to =
+      user.role === 'client'
+        ? '/client-dashboard'
+        : user.role === 'doer'
+          ? '/doer-dashboard'
+          : user.role === 'admin'
+            ? '/admin-dashboard'
+            : '/';
+
+    return <Navigate to={to} replace />;
+  }
 
   return <>{children}</>;
 };
+
