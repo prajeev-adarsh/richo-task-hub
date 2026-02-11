@@ -18,10 +18,27 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ["react", "react-dom", "react-router", "react-router-dom"],
+    dedupe: [
+      "react",
+      "react-dom",
+      "react-router",
+      "react-router-dom",
+      "@tanstack/react-query",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-select",
+      "@radix-ui/react-tooltip",
+    ],
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react-dom/client", "react/jsx-runtime", "react/jsx-dev-runtime"],
+    include: [
+      "react",
+      "react-dom",
+      "react-dom/client",
+      "react/jsx-runtime",
+      "react/jsx-dev-runtime",
+      "@tanstack/react-query",
+    ],
     force: true,
   },
 }));
