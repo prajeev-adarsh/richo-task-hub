@@ -1,11 +1,27 @@
-// Service Worker for caching static assets
-const CACHE_NAME = 'richo-cache-v1';
+// Service Worker for caching static assets (PROD build output)
+const CACHE_NAME = 'richo-cache-v2';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
   '/',
   '/notification-sound.mp3',
 ];
+
+const isCacheableAsset = (request, url) => {
+  // Never cache Vite dev dependency chunks
+  if (url.pathname.startsWith('/node_modules/.vite/')) return false;
+
+  // Cache Vite build assets + common static files
+  if (url.pathname.startsWith('/assets/')) return true;
+  if (url.pathname.startsWith('/icons/')) return true;
+  if (url.pathname === '/favicon.ico') return true;
+  if (url.pathname === '/manifest.json') return true;
+
+  // Images/fonts requested outside /assets (e.g., /placeholder.svg)
+  if (request.destination === 'image' || request.destination === 'font') return true;
+
+  return false;
+};
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
@@ -24,48 +40,41 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames
           .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+          .map((name) => caches.delete(name)),
       );
-    })
+    }),
   );
   self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Only cache same-origin requests
-  if (url.origin !== location.origin) {
-    return;
-  }
+  // Only handle same-origin requests
+  if (url.origin !== location.origin) return;
 
-  // Cache-first for static assets (JS, CSS, images, fonts)
-  if (
-    request.destination === 'script' ||
-    request.destination === 'style' ||
-    request.destination === 'image' ||
-    request.destination === 'font' ||
-    url.pathname.startsWith('/assets/')
-  ) {
+  // Cache-first only for safe, versioned build/static assets
+  if (isCacheableAsset(request, url)) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
-          // Return cached version and update cache in background
+          // Update cache in background
           event.waitUntil(
-            fetch(request).then((networkResponse) => {
-              if (networkResponse.ok) {
-                caches.open(CACHE_NAME).then((cache) => {
-                  cache.put(request, networkResponse.clone());
-                });
-              }
-            }).catch(() => {})
+            fetch(request)
+              .then((networkResponse) => {
+                if (networkResponse.ok) {
+                  return caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(request, networkResponse.clone());
+                  });
+                }
+              })
+              .catch(() => {}),
           );
           return cachedResponse;
         }
 
-        // Not in cache, fetch from network and cache
         return fetch(request).then((networkResponse) => {
           if (networkResponse.ok) {
             const responseClone = networkResponse.clone();
@@ -75,16 +84,15 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         });
-      })
+      }),
     );
     return;
   }
 
-  // Network-first for HTML and API calls
+  // Network-first for navigation/API; fallback to cache for offline
   event.respondWith(
     fetch(request)
       .then((networkResponse) => {
-        // Cache successful HTML responses
         if (networkResponse.ok && request.destination === 'document') {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -93,9 +101,7 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       })
-      .catch(() => {
-        // Fallback to cache for offline support
-        return caches.match(request);
-      })
+      .catch(() => caches.match(request)),
   );
 });
+
