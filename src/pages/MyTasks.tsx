@@ -957,12 +957,22 @@ const MyTasks = () => {
                             Applied {format(new Date(application.applied_at), 'MMM dd, yyyy at h:mm a')}
                           </p>
                           
-                          <Badge variant={
-                            application.status === 'accepted' ? 'default' :
-                            application.status === 'rejected' ? 'destructive' : 'secondary'
-                          }>
-                            {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={
+                              application.status === 'accepted' ? 'default' :
+                              application.status === 'rejected' ? 'destructive' : 'secondary'
+                            }>
+                              {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/doer/${application.doer_id}`)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View Profile
+                            </Button>
+                          </div>
                         </div>
                       </div>
 

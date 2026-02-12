@@ -32,7 +32,6 @@ interface Task {
   client: {
     id: string;
     name: string;
-    email: string;
   };
 }
 
@@ -74,16 +73,30 @@ const MyGigs = () => {
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          client:users!tasks_client_id_fkey(id, name, email)
-        `)
+        .select('*')
         .eq('doer_id', user.id)
         .eq('status', 'in_progress')
         .order('deadline', { ascending: true });
 
       if (error) throw error;
-      setTasks(data || []);
+
+      // Fetch client profiles via secure RPC
+      const clientIds = (data || []).map(t => t.client_id);
+      const clientMap: Record<string, { id: string; name: string; photo_url: string | null }> = {};
+
+      if (clientIds.length > 0) {
+        const { data: profiles } = await supabase.rpc('get_public_profiles', { _user_ids: clientIds });
+        (profiles || []).forEach((p: any) => {
+          clientMap[p.id] = { id: p.id, name: p.name, photo_url: p.photo_url };
+        });
+      }
+
+      const enriched = (data || []).map(t => ({
+        ...t,
+        client: clientMap[t.client_id] || { id: t.client_id, name: 'Unknown' },
+      }));
+
+      setTasks(enriched);
     } catch (error) {
       logger.error('Error fetching tasks:', error);
       toast({
