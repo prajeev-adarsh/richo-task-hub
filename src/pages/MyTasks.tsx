@@ -35,9 +35,7 @@ interface Task {
   doer?: {
     id: string;
     name: string;
-    email: string;
     photo_url: string | null;
-    upi_id: string | null;
   };
 }
 
@@ -50,10 +48,6 @@ interface TaskApplication {
   doer: {
     id: string;
     name: string;
-    email: string;
-    phone: string | null;
-    role: string;
-    language: string;
     photo_url: string | null;
   };
 }
@@ -132,15 +126,31 @@ const MyTasks = () => {
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          doer:users!tasks_doer_id_fkey(id, name, email, photo_url, upi_id)
-        `)
+        .select('*')
         .eq('client_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTasks(data || []);
+
+      // Fetch doer profiles via secure RPC
+      const doerIds = (data || []).filter(t => t.doer_id).map(t => t.doer_id as string);
+      const doerMap: Record<string, any> = {};
+
+      if (doerIds.length > 0) {
+        const { data: profiles } = await supabase.rpc('get_public_profiles', { _user_ids: doerIds });
+        (profiles || []).forEach((p: any) => {
+          doerMap[p.id] = { id: p.id, name: p.name, photo_url: p.photo_url };
+        });
+        // Fetch UPI IDs from users table (client can read own profile, but need doer's UPI)
+        // UPI is only needed for payment - we'll handle that separately if needed
+      }
+
+      const enriched = (data || []).map(t => ({
+        ...t,
+        doer: t.doer_id ? (doerMap[t.doer_id] || { id: t.doer_id, name: 'Unknown', photo_url: null }) : undefined,
+      }));
+
+      setTasks(enriched);
     } catch (error) {
       logger.error('Error fetching tasks:', error);
       toast({
@@ -157,15 +167,29 @@ const MyTasks = () => {
     try {
       const { data, error } = await supabase
         .from('task_applications')
-        .select(`
-          *,
-          doer:users!task_applications_doer_id_fkey(*)
-        `)
+        .select('*')
         .eq('task_id', taskId)
         .order('applied_at', { ascending: false });
 
       if (error) throw error;
-       setApplications(data || []);
+
+      // Fetch public profiles via secure RPC
+      const doerIds = (data || []).map(a => a.doer_id);
+      const profilesMap: Record<string, { id: string; name: string; photo_url: string | null }> = {};
+
+      if (doerIds.length > 0) {
+        const { data: profiles } = await supabase.rpc('get_public_profiles', { _user_ids: doerIds });
+        (profiles || []).forEach((p: any) => {
+          profilesMap[p.id] = { id: p.id, name: p.name, photo_url: p.photo_url };
+        });
+      }
+
+      const enriched = (data || []).map(app => ({
+        ...app,
+        doer: profilesMap[app.doer_id] || { id: app.doer_id, name: 'Unknown', photo_url: null },
+      }));
+
+      setApplications(enriched);
      } catch (error) {
        logger.error('Error fetching applications:', error);
        toast({
@@ -781,11 +805,6 @@ const MyTasks = () => {
                             <div className="text-sm text-muted-foreground">
                               <span className="font-medium">Doer:</span> {task.doer.name}
                             </div>
-                            {task.doer.upi_id && (
-                              <div className="text-sm">
-                                <span className="font-medium">UPI ID:</span> {task.doer.upi_id}
-                              </div>
-                            )}
                             <Button 
                               variant="outline" 
                               size="sm" 
@@ -929,22 +948,9 @@ const MyTasks = () => {
                           </AvatarFallback>
                         </Avatar>
                         
-                        <div className="space-y-2">
+                          <div className="space-y-2">
                           <div>
                             <h4 className="font-medium">{application.doer.name}</h4>
-                            <p className="text-sm text-muted-foreground">{application.doer.email}</p>
-                            {application.doer.phone && (
-                              <p className="text-sm text-muted-foreground">{application.doer.phone}</p>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="capitalize">
-                              {application.doer.role}
-                            </Badge>
-                            <Badge variant="secondary">
-                              {application.doer.language.toUpperCase()}
-                            </Badge>
                           </div>
                           
                           <p className="text-sm text-muted-foreground">
