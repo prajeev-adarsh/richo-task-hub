@@ -205,15 +205,6 @@ const MyGigs = () => {
 
       if (error) throw error;
 
-      // Notify the client that proof has been submitted
-      await supabase.rpc('create_notification', {
-        p_user_id: selectedTask.client_id,
-        p_type: 'proof_submitted',
-        p_title: 'Proof Submitted',
-        p_message: `${user.name} has submitted proof for "${selectedTask.title}"`,
-        p_payload: { task_id: selectedTask.id, doer_id: user.id },
-      });
-
       setUploadProgress(100);
 
       toast({
