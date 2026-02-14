@@ -299,6 +299,11 @@ const MyTasks = () => {
     }
   };
 
+  const isImageFile = (url: string) => {
+    const ext = url.split('.').pop()?.toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
+  };
+
   const handleAcceptProof = async () => {
     if (!selectedTask || !selectedProof) return;
 
@@ -319,6 +324,17 @@ const MyTasks = () => {
         .eq('id', selectedProof.id);
 
       if (proofError) throw proofError;
+
+      // Notify the doer that proof was accepted
+      if (selectedTask.doer_id) {
+        await supabase.rpc('create_notification', {
+          p_user_id: selectedTask.doer_id,
+          p_type: 'proof_accepted',
+          p_title: 'Proof Accepted',
+          p_message: `Your proof for "${selectedTask.title}" has been accepted! The task is now completed.`,
+          p_payload: { task_id: selectedTask.id },
+        });
+      }
 
       toast({
         title: "✅ Proof accepted!",
@@ -349,7 +365,7 @@ const MyTasks = () => {
   };
 
   const handleRejectProof = async () => {
-    if (!selectedProof) return;
+    if (!selectedProof || !selectedTask) return;
 
     setProcessingProof('reject');
     try {
@@ -359,6 +375,17 @@ const MyTasks = () => {
         .eq('id', selectedProof.id);
 
       if (error) throw error;
+
+      // Notify the doer that proof was rejected
+      if (selectedTask.doer_id) {
+        await supabase.rpc('create_notification', {
+          p_user_id: selectedTask.doer_id,
+          p_type: 'proof_rejected',
+          p_title: 'Proof Rejected',
+          p_message: `Your proof for "${selectedTask.title}" was rejected. Please re-submit with updated proof.`,
+          p_payload: { task_id: selectedTask.id },
+        });
+      }
 
       toast({
         title: "❌ Proof rejected",
@@ -844,8 +871,8 @@ const MyTasks = () => {
                         Applications
                       </Button>
                     
-                    {/* Show View Proof button for in_progress tasks with proof */}
-                    {task.status === 'in_progress' && getProofForTask(task.id) && (
+                    {/* Show View Proof button for tasks with proof */}
+                    {(task.status === 'in_progress' || task.status === 'completed') && getProofForTask(task.id) && (
                       <Button 
                         variant="secondary" 
                         size="sm" 
@@ -1020,7 +1047,21 @@ const MyTasks = () => {
 
             {selectedProof && (
               <div className="space-y-6">
-                {/* File Preview/Download */}
+                {/* Inline Image Preview */}
+                {proofSignedUrl && isImageFile(selectedProof.file_url) && (
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Preview</Label>
+                    <div className="border rounded-lg overflow-hidden bg-muted/30">
+                      <img
+                        src={proofSignedUrl}
+                        alt="Proof preview"
+                        className="w-full max-h-[400px] object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* File Download */}
                 <div className="space-y-3">
                   <Label className="text-base font-medium">Submitted File</Label>
                   <div className="border rounded-lg p-4">
