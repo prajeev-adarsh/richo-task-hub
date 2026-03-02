@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { Users, UserCog, CreditCard, TrendingUp, Star, FileText, Filter, Download, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { format, subDays, startOfDay, eachDayOfInterval } from 'date-fns';
+import { Users, UserCog, CreditCard, TrendingUp, Star, FileText, Download, AlertTriangle, BarChart3, Activity } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -10,11 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import { logger } from '@/lib/logger';
+import Navigation from '@/components/Navigation';
+import {
+  BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+} from 'recharts';
 
+// ── Types ──────────────────────────────────────────────
 interface User {
   id: string;
   name: string;
@@ -64,266 +68,144 @@ interface RevenueData {
   upiPayments: number;
 }
 
+const CHART_COLORS = [
+  'hsl(195, 100%, 45%)', // primary cyan
+  'hsl(270, 85%, 60%)',  // accent purple
+  'hsl(160, 84%, 39%)',  // success green
+  'hsl(45, 93%, 47%)',   // warning yellow
+  'hsl(0, 84%, 60%)',    // destructive red
+  'hsl(210, 70%, 55%)',  // blue
+  'hsl(330, 70%, 55%)',  // pink
+  'hsl(120, 50%, 45%)',  // dark green
+];
+
+// ── Component ──────────────────────────────────────────
 const AdminDashboard = () => {
   const { user } = useUser();
   const { toast } = useToast();
-  
-  // State for different tabs
+
   const [users, setUsers] = useState<User[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [revenueData, setRevenueData] = useState<RevenueData>({
-    totalTasks: 0,
-    totalPaidTasks: 0,
-    totalRevenue: 0,
-    upiPayments: 0,
+    totalTasks: 0, totalPaidTasks: 0, totalRevenue: 0, upiPayments: 0,
   });
-  
-  // Loading states
+
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(false);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [ratingsLoading, setRatingsLoading] = useState(false);
-  
-  // Filter states
+
   const [userRoleFilter, setUserRoleFilter] = useState<string>('all');
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
   const [paymentModeFilter, setPaymentModeFilter] = useState<string>('all');
-  
-  // Pagination
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  
-  // Modal states
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [selectedUserName, setSelectedUserName] = useState<string>('');
-  const [deletionReason, setDeletionReason] = useState<string>('');
+  const [selectedUserName, setSelectedUserName] = useState('');
+  const [deletionReason, setDeletionReason] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Check if user is admin
+  // ── Access check ─────────────────────────────────────
   useEffect(() => {
     if (user && user.role !== 'admin') {
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to access the admin dashboard",
-        variant: "destructive",
-      });
+      toast({ title: 'Access Denied', description: "You don't have permission to access the admin dashboard", variant: 'destructive' });
       window.location.href = '/';
       return;
     }
-    
-    if (user && user.role === 'admin') {
-      fetchAllData();
-    }
+    if (user && user.role === 'admin') fetchAllData();
   }, [user]);
 
+  // ── Data Fetchers ────────────────────────────────────
   const fetchAllData = async () => {
     setLoading(true);
-    await Promise.all([
-      fetchUsers(),
-      fetchTasks(),
-      fetchPayments(),
-      fetchRatings(),
-      fetchRevenueData(),
-    ]);
+    await Promise.all([fetchUsers(), fetchTasks(), fetchPayments(), fetchRatings(), fetchRevenueData()]);
     setLoading(false);
   };
 
   const fetchUsers = async () => {
     setUsersLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .is('deleted_at', null) // Exclude soft-deleted users
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await supabase.from('users').select('*').is('deleted_at', null).order('created_at', { ascending: false });
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
       logger.error('Error fetching users:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load users",
-        variant: "destructive",
-      });
-    } finally {
-      setUsersLoading(false);
-    }
+      toast({ title: 'Error', description: 'Failed to load users', variant: 'destructive' });
+    } finally { setUsersLoading(false); }
   };
 
   const fetchTasks = async () => {
     setTasksLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select(`
-          *,
-          client:users!tasks_client_id_fkey(email),
-          doer:users!tasks_doer_id_fkey(email)
-        `)
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await supabase.from('tasks').select('*, client:users!tasks_client_id_fkey(email), doer:users!tasks_doer_id_fkey(email)').order('created_at', { ascending: false });
       if (error) throw error;
-      
-      const formattedTasks = data?.map(task => ({
-        ...task,
-        client_email: task.client?.email || '',
-        doer_email: task.doer?.email || null,
-      })) || [];
-      
-      setTasks(formattedTasks);
+      setTasks(data?.map(t => ({ ...t, client_email: t.client?.email || '', doer_email: t.doer?.email || null })) || []);
     } catch (error) {
       logger.error('Error fetching tasks:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load tasks",
-        variant: "destructive",
-      });
-    } finally {
-      setTasksLoading(false);
-    }
+      toast({ title: 'Error', description: 'Failed to load tasks', variant: 'destructive' });
+    } finally { setTasksLoading(false); }
   };
 
   const fetchPayments = async () => {
     setPaymentsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          task:tasks(title),
-          client:users!fk_payments_client_id(email),
-          doer:users!fk_payments_doer_id(email)
-        `)
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await supabase.from('payments').select('*, task:tasks(title), client:users!fk_payments_client_id(email), doer:users!fk_payments_doer_id(email)').order('created_at', { ascending: false });
       if (error) throw error;
-      
-      const formattedPayments = data?.map(payment => ({
-        ...payment,
-        client_email: payment.client?.email || '',
-        doer_email: payment.doer?.email || null,
-      })) || [];
-      
-      setPayments(formattedPayments);
+      setPayments(data?.map(p => ({ ...p, client_email: p.client?.email || '', doer_email: p.doer?.email || null })) || []);
     } catch (error) {
       logger.error('Error fetching payments:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load payments",
-        variant: "destructive",
-      });
-    } finally {
-      setPaymentsLoading(false);
-    }
+      toast({ title: 'Error', description: 'Failed to load payments', variant: 'destructive' });
+    } finally { setPaymentsLoading(false); }
   };
 
   const fetchRatings = async () => {
     setRatingsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('ratings')
-        .select(`
-          *,
-          task:tasks(title),
-          reviewer:users!ratings_from_user_fkey(name),
-          receiver:users!ratings_to_user_fkey(name)
-        `)
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await supabase.from('ratings').select('*, task:tasks(title), reviewer:users!ratings_from_user_fkey(name), receiver:users!ratings_to_user_fkey(name)').order('created_at', { ascending: false });
       if (error) throw error;
-      
-      const formattedRatings = data?.map(rating => ({
-        ...rating,
-        reviewer_name: rating.reviewer?.name || '',
-        receiver_name: rating.receiver?.name || '',
-      })) || [];
-      
-      setRatings(formattedRatings);
+      setRatings(data?.map(r => ({ ...r, reviewer_name: r.reviewer?.name || '', receiver_name: r.receiver?.name || '' })) || []);
     } catch (error) {
       logger.error('Error fetching ratings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load ratings",
-        variant: "destructive",
-      });
-    } finally {
-      setRatingsLoading(false);
-    }
+      toast({ title: 'Error', description: 'Failed to load ratings', variant: 'destructive' });
+    } finally { setRatingsLoading(false); }
   };
 
   const fetchRevenueData = async () => {
     try {
-      // Get total tasks
-      const { count: totalTasks } = await supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true });
-
-      // Get paid tasks and payments data
-      const { data: paymentsData, error } = await supabase
-        .from('payments')
-        .select('amount, payment_mode, payment_status');
-
+      const { count: totalTasks } = await supabase.from('tasks').select('*', { count: 'exact', head: true });
+      const { data: paymentsData, error } = await supabase.from('payments').select('amount, payment_mode, payment_status');
       if (error) throw error;
-
       const paidPayments = paymentsData?.filter(p => p.payment_status === 'paid') || [];
-      const totalRevenue = paidPayments.reduce((sum, payment) => sum + payment.amount, 0);
+      const totalRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
       const upiPayments = paidPayments.filter(p => p.payment_mode === 'upi_manual').length;
-
-      setRevenueData({
-        totalTasks: totalTasks || 0,
-        totalPaidTasks: paidPayments.length,
-        totalRevenue,
-        upiPayments,
-      });
-    } catch (error) {
-      logger.error('Error fetching revenue data:', error);
-    }
+      setRevenueData({ totalTasks: totalTasks || 0, totalPaidTasks: paidPayments.length, totalRevenue, upiPayments });
+    } catch (error) { logger.error('Error fetching revenue data:', error); }
   };
 
+  // ── Actions ──────────────────────────────────────────
   const handleDeleteUser = async () => {
     if (!selectedUserId) return;
-    
-    // Require a deletion reason for audit purposes
     if (!deletionReason.trim() || deletionReason.trim().length < 10) {
-      toast({
-        title: "Reason required",
-        description: "Please provide a deletion reason (at least 10 characters)",
-        variant: "destructive",
-      });
+      toast({ title: 'Reason required', description: 'Please provide a deletion reason (at least 10 characters)', variant: 'destructive' });
       return;
     }
-
     setIsDeleting(true);
     try {
-      // Use secure soft delete RPC function
-      const { error } = await supabase.rpc('soft_delete_user', {
-        p_user_id: selectedUserId,
-        p_reason: deletionReason.trim()
-      });
-
+      const { error } = await supabase.rpc('soft_delete_user', { p_user_id: selectedUserId, p_reason: deletionReason.trim() });
       if (error) {
-        // Handle specific error messages from the RPC
-        if (error.message.includes('active tasks')) {
-          throw new Error('Cannot delete user with active tasks. Please cancel or complete their tasks first.');
-        } else if (error.message.includes('pending payments')) {
-          throw new Error('Cannot delete user with pending payments. Please resolve payments first.');
-        } else if (error.message.includes('admin users')) {
-          throw new Error('Cannot delete admin users');
-        }
+        if (error.message.includes('active tasks')) throw new Error('Cannot delete user with active tasks. Please cancel or complete their tasks first.');
+        if (error.message.includes('pending payments')) throw new Error('Cannot delete user with pending payments. Please resolve payments first.');
+        if (error.message.includes('admin users')) throw new Error('Cannot delete admin users');
         throw error;
       }
-
-      toast({
-        title: "User deactivated",
-        description: `${selectedUserName} has been deactivated successfully. Their data is preserved for audit purposes.`,
-      });
-
+      toast({ title: 'User deactivated', description: `${selectedUserName} has been deactivated successfully.` });
       fetchUsers();
       setShowDeleteModal(false);
       setSelectedUserId(null);
@@ -331,14 +213,8 @@ const AdminDashboard = () => {
       setDeletionReason('');
     } catch (error: any) {
       logger.error('Error deleting user:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete user",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
+      toast({ title: 'Error', description: error.message || 'Failed to delete user', variant: 'destructive' });
+    } finally { setIsDeleting(false); }
   };
 
   const openDeleteModal = (userId: string, userName: string) => {
@@ -348,44 +224,68 @@ const AdminDashboard = () => {
     setShowDeleteModal(true);
   };
 
-  // Filter functions
-  const getFilteredUsers = () => {
-    let filtered = users;
-    if (userRoleFilter !== 'all') {
-      filtered = filtered.filter(user => user.role === userRoleFilter);
-    }
-    return filtered;
-  };
-
-  const getFilteredTasks = () => {
-    let filtered = tasks;
-    if (taskStatusFilter !== 'all') {
-      filtered = filtered.filter(task => task.status === taskStatusFilter);
-    }
-    return filtered;
-  };
-
+  // ── Filter helpers ───────────────────────────────────
+  const getFilteredUsers = () => userRoleFilter === 'all' ? users : users.filter(u => u.role === userRoleFilter);
+  const getFilteredTasks = () => taskStatusFilter === 'all' ? tasks : tasks.filter(t => t.status === taskStatusFilter);
   const getFilteredPayments = () => {
     let filtered = payments;
-    if (paymentStatusFilter !== 'all') {
-      filtered = filtered.filter(payment => payment.payment_status === paymentStatusFilter);
-    }
-    if (paymentModeFilter !== 'all') {
-      filtered = filtered.filter(payment => payment.payment_mode === paymentModeFilter);
-    }
+    if (paymentStatusFilter !== 'all') filtered = filtered.filter(p => p.payment_status === paymentStatusFilter);
+    if (paymentModeFilter !== 'all') filtered = filtered.filter(p => p.payment_mode === paymentModeFilter);
     return filtered;
   };
+  const getPaginatedData = (data: any[]) => data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const getTotalPages = (len: number) => Math.ceil(len / itemsPerPage);
 
-  // Pagination helper
-  const getPaginatedData = (data: any[]) => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return data.slice(startIndex, startIndex + itemsPerPage);
-  };
+  // ── Chart data (memoised) ───────────────────────────
+  const last30Days = useMemo(() => eachDayOfInterval({ start: subDays(new Date(), 29), end: new Date() }), []);
 
-  const getTotalPages = (dataLength: number) => {
-    return Math.ceil(dataLength / itemsPerPage);
-  };
+  const taskTrendData = useMemo(() => {
+    return last30Days.map(day => {
+      const dayStr = format(day, 'yyyy-MM-dd');
+      const count = tasks.filter(t => format(new Date(t.created_at), 'yyyy-MM-dd') === dayStr).length;
+      return { date: format(day, 'MMM dd'), tasks: count };
+    });
+  }, [tasks, last30Days]);
 
+  const revenueTrendData = useMemo(() => {
+    return last30Days.map(day => {
+      const dayStr = format(day, 'yyyy-MM-dd');
+      const dayRevenue = payments
+        .filter(p => p.payment_status === 'paid' && format(new Date(p.created_at), 'yyyy-MM-dd') === dayStr)
+        .reduce((sum, p) => sum + p.amount, 0);
+      return { date: format(day, 'MMM dd'), revenue: dayRevenue };
+    });
+  }, [payments, last30Days]);
+
+  const userGrowthData = useMemo(() => {
+    let cumulative = users.filter(u => new Date(u.created_at) < startOfDay(last30Days[0])).length;
+    return last30Days.map(day => {
+      const dayStr = format(day, 'yyyy-MM-dd');
+      const newUsers = users.filter(u => format(new Date(u.created_at), 'yyyy-MM-dd') === dayStr).length;
+      cumulative += newUsers;
+      return { date: format(day, 'MMM dd'), total: cumulative, new: newUsers };
+    });
+  }, [users, last30Days]);
+
+  const categoryData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    tasks.forEach(t => { counts[t.category] = (counts[t.category] || 0) + 1; });
+    return Object.entries(counts).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }));
+  }, [tasks]);
+
+  const taskStatusData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    tasks.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
+    return Object.entries(counts).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }));
+  }, [tasks]);
+
+  const roleDistribution = useMemo(() => {
+    const counts: Record<string, number> = {};
+    users.forEach(u => { counts[u.role] = (counts[u.role] || 0) + 1; });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [users]);
+
+  // ── Render Guards ────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -407,18 +307,19 @@ const AdminDashboard = () => {
             <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">Access Denied</h3>
             <p className="text-muted-foreground mb-4">You don't have permission to access this page</p>
-            <Button onClick={() => window.location.href = '/'}>
-              Go to Home
-            </Button>
+            <Button onClick={() => (window.location.href = '/')}>Go to Home</Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
+  // ── Main Render ──────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold">Admin Dashboard</h1>
@@ -430,49 +331,166 @@ const AdminDashboard = () => {
           </Button>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="users">
-              <Users className="h-4 w-4 mr-2" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="tasks">
-              <FileText className="h-4 w-4 mr-2" />
-              Tasks
-            </TabsTrigger>
-            <TabsTrigger value="payments">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Payments
-            </TabsTrigger>
-            <TabsTrigger value="revenue">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Revenue
-            </TabsTrigger>
-            <TabsTrigger value="ratings">
-              <Star className="h-4 w-4 mr-2" />
-              Ratings
-            </TabsTrigger>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Card className="card-futuristic">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{users.length}</div>
+              <p className="text-xs text-muted-foreground">{users.filter(u => u.role === 'doer').length} doers · {users.filter(u => u.role === 'client').length} clients</p>
+            </CardContent>
+          </Card>
+          <Card className="card-futuristic">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{revenueData.totalTasks}</div>
+              <p className="text-xs text-muted-foreground">{tasks.filter(t => t.status === 'open').length} open</p>
+            </CardContent>
+          </Card>
+          <Card className="card-futuristic">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹{revenueData.totalRevenue.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">{revenueData.totalPaidTasks} paid tasks</p>
+            </CardContent>
+          </Card>
+          <Card className="card-futuristic">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {ratings.length > 0 ? (ratings.reduce((s, r) => s + r.stars, 0) / ratings.length).toFixed(1) : '—'}
+              </div>
+              <p className="text-xs text-muted-foreground">{ratings.length} reviews</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="analytics" className="space-y-6" onValueChange={() => setCurrentPage(1)}>
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1.5" />Analytics</TabsTrigger>
+            <TabsTrigger value="users"><Users className="h-4 w-4 mr-1.5" />Users</TabsTrigger>
+            <TabsTrigger value="tasks"><FileText className="h-4 w-4 mr-1.5" />Tasks</TabsTrigger>
+            <TabsTrigger value="payments"><CreditCard className="h-4 w-4 mr-1.5" />Payments</TabsTrigger>
+            <TabsTrigger value="revenue"><TrendingUp className="h-4 w-4 mr-1.5" />Revenue</TabsTrigger>
+            <TabsTrigger value="ratings"><Star className="h-4 w-4 mr-1.5" />Ratings</TabsTrigger>
           </TabsList>
 
-          {/* Users Tab */}
+          {/* ── Analytics Tab ─────────────────────────── */}
+          <TabsContent value="analytics" className="space-y-6">
+            {/* Task Trend */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" />Tasks Created (Last 30 Days)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={taskTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={4} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }} />
+                      <Bar dataKey="tasks" fill="hsl(195, 100%, 45%)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              {/* User Growth */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />User Growth (Last 30 Days)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={userGrowthData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={4} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis allowDecimals={false} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }} />
+                      <Legend />
+                      <Line type="monotone" dataKey="total" stroke="hsl(195, 100%, 45%)" strokeWidth={2} dot={false} name="Total Users" />
+                      <Line type="monotone" dataKey="new" stroke="hsl(270, 85%, 60%)" strokeWidth={2} dot={false} name="New Users" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Pie Charts Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader><CardTitle className="text-base">Task Categories</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie data={categoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                        {categoryData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle className="text-base">Task Status</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie data={taskStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                        {taskStatusData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle className="text-base">User Roles</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie data={roleDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                        {roleDistribution.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ── Users Tab ─────────────────────────────── */}
           <TabsContent value="users">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Users Management</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Filter by role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="client">Client</SelectItem>
-                        <SelectItem value="doer">Doer</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
+                    <SelectTrigger className="w-32"><SelectValue placeholder="Filter by role" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="client">Client</SelectItem>
+                      <SelectItem value="doer">Doer</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
               <CardContent>
@@ -491,39 +509,20 @@ const AdminDashboard = () => {
                     </TableHeader>
                     <TableBody>
                       {usersLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
-                            Loading users...
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={7} className="text-center py-8">Loading users...</TableCell></TableRow>
                       ) : getFilteredUsers().length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
-                            No users found
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={7} className="text-center py-8">No users found</TableCell></TableRow>
                       ) : (
-                        getPaginatedData(getFilteredUsers()).map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell className="font-medium">{user.name}</TableCell>
-                            <TableCell>{user.email}</TableCell>
+                        getPaginatedData(getFilteredUsers()).map(u => (
+                          <TableRow key={u.id}>
+                            <TableCell className="font-medium">{u.name}</TableCell>
+                            <TableCell>{u.email}</TableCell>
+                            <TableCell><Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>{u.role}</Badge></TableCell>
+                            <TableCell>{u.upi_id || 'Not set'}</TableCell>
+                            <TableCell className="uppercase">{u.language}</TableCell>
+                            <TableCell>{format(new Date(u.created_at), 'MMM dd, yyyy')}</TableCell>
                             <TableCell>
-                              <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                                {user.role}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{user.upi_id || 'Not set'}</TableCell>
-                            <TableCell className="uppercase">{user.language}</TableCell>
-                            <TableCell>{format(new Date(user.created_at), 'MMM dd, yyyy')}</TableCell>
-                            <TableCell>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => openDeleteModal(user.id, user.name)}
-                                disabled={user.role === 'admin'}
-                              >
-                                Delete
-                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => openDeleteModal(u.id, u.name)} disabled={u.role === 'admin'}>Delete</Button>
                             </TableCell>
                           </TableRow>
                         ))
@@ -535,19 +534,18 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          {/* Tasks Tab */}
+          {/* ── Tasks Tab ─────────────────────────────── */}
           <TabsContent value="tasks">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Tasks Overview</CardTitle>
                   <Select value={taskStatusFilter} onValueChange={setTaskStatusFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
+                    <SelectTrigger className="w-40"><SelectValue placeholder="Filter by status" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="assigned">Assigned</SelectItem>
                       <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -571,35 +569,23 @@ const AdminDashboard = () => {
                     </TableHeader>
                     <TableBody>
                       {tasksLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
-                            Loading tasks...
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={7} className="text-center py-8">Loading tasks...</TableCell></TableRow>
                       ) : getFilteredTasks().length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
-                            No tasks found
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={7} className="text-center py-8">No tasks found</TableCell></TableRow>
                       ) : (
-                        getPaginatedData(getFilteredTasks()).map((task) => (
-                          <TableRow key={task.id}>
-                            <TableCell className="font-medium max-w-xs truncate">{task.title}</TableCell>
-                            <TableCell className="capitalize">{task.category}</TableCell>
-                            <TableCell>₹{task.budget.toLocaleString()}</TableCell>
+                        getPaginatedData(getFilteredTasks()).map(t => (
+                          <TableRow key={t.id}>
+                            <TableCell className="font-medium max-w-xs truncate">{t.title}</TableCell>
+                            <TableCell className="capitalize">{t.category.replace(/_/g, ' ')}</TableCell>
+                            <TableCell>₹{t.budget.toLocaleString()}</TableCell>
                             <TableCell>
-                              <Badge variant={
-                                task.status === 'completed' ? 'default' :
-                                task.status === 'in_progress' ? 'secondary' :
-                                task.status === 'open' ? 'outline' : 'destructive'
-                              }>
-                                {task.status.replace('_', ' ')}
+                              <Badge variant={t.status === 'completed' ? 'default' : t.status === 'in_progress' ? 'secondary' : t.status === 'open' ? 'outline' : 'destructive'}>
+                                {t.status.replace(/_/g, ' ')}
                               </Badge>
                             </TableCell>
-                            <TableCell className="truncate max-w-xs">{task.client_email}</TableCell>
-                            <TableCell className="truncate max-w-xs">{task.doer_email || 'Unassigned'}</TableCell>
-                            <TableCell>{format(new Date(task.created_at), 'MMM dd, yyyy')}</TableCell>
+                            <TableCell className="truncate max-w-xs">{t.client_email}</TableCell>
+                            <TableCell className="truncate max-w-xs">{t.doer_email || 'Unassigned'}</TableCell>
+                            <TableCell>{format(new Date(t.created_at), 'MMM dd, yyyy')}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -610,7 +596,7 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          {/* Payments Tab */}
+          {/* ── Payments Tab ──────────────────────────── */}
           <TabsContent value="payments">
             <Card>
               <CardHeader>
@@ -618,34 +604,20 @@ const AdminDashboard = () => {
                   <CardTitle>Payments Overview</CardTitle>
                   <div className="flex items-center gap-2">
                     <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
+                      <SelectTrigger className="w-32"><SelectValue placeholder="Status" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
                         <SelectItem value="paid">Paid</SelectItem>
                         <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="refunded">Refunded</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={paymentModeFilter} onValueChange={setPaymentModeFilter}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Modes</SelectItem>
-                        <SelectItem value="upi_manual">UPI Manual</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="mb-4">
-                  <p className="text-sm text-muted-foreground">
-                    Total Amount: <span className="font-medium">₹{getFilteredPayments().reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</span>
-                  </p>
-                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Total: <span className="font-medium">₹{getFilteredPayments().reduce((s, p) => s + p.amount, 0).toLocaleString()}</span>
+                </p>
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
@@ -661,33 +633,19 @@ const AdminDashboard = () => {
                     </TableHeader>
                     <TableBody>
                       {paymentsLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
-                            Loading payments...
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={7} className="text-center py-8">Loading payments...</TableCell></TableRow>
                       ) : getFilteredPayments().length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
-                            No payments found
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={7} className="text-center py-8">No payments found</TableCell></TableRow>
                       ) : (
-                        getPaginatedData(getFilteredPayments()).map((payment) => (
-                          <TableRow key={payment.id}>
-                            <TableCell className="font-mono text-sm">{payment.task_id.slice(0, 8)}...</TableCell>
-                            <TableCell className="font-medium">₹{payment.amount.toLocaleString()}</TableCell>
-                            <TableCell className="truncate max-w-xs">{payment.client_email}</TableCell>
-                            <TableCell className="truncate max-w-xs">{payment.doer_email || 'N/A'}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">UPI</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={payment.payment_status === 'paid' ? 'default' : 'secondary'}>
-                                {payment.payment_status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{format(new Date(payment.created_at), 'MMM dd, yyyy')}</TableCell>
+                        getPaginatedData(getFilteredPayments()).map(p => (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-mono text-sm">{p.task_id.slice(0, 8)}...</TableCell>
+                            <TableCell className="font-medium">₹{p.amount.toLocaleString()}</TableCell>
+                            <TableCell className="truncate max-w-xs">{p.client_email}</TableCell>
+                            <TableCell className="truncate max-w-xs">{p.doer_email || 'N/A'}</TableCell>
+                            <TableCell><Badge variant="outline">UPI</Badge></TableCell>
+                            <TableCell><Badge variant={p.payment_status === 'paid' ? 'default' : 'secondary'}>{p.payment_status}</Badge></TableCell>
+                            <TableCell>{format(new Date(p.created_at), 'MMM dd, yyyy')}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -698,9 +656,9 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          {/* Revenue Tab */}
-          <TabsContent value="revenue">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {/* ── Revenue Tab ───────────────────────────── */}
+          <TabsContent value="revenue" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
@@ -708,10 +666,8 @@ const AdminDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{revenueData.totalTasks}</div>
-                  <p className="text-xs text-muted-foreground">All time</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Paid Tasks</CardTitle>
@@ -720,11 +676,10 @@ const AdminDashboard = () => {
                 <CardContent>
                   <div className="text-2xl font-bold">{revenueData.totalPaidTasks}</div>
                   <p className="text-xs text-muted-foreground">
-                    {revenueData.totalTasks > 0 ? `${((revenueData.totalPaidTasks / revenueData.totalTasks) * 100).toFixed(1)}% of total` : '0% of total'}
+                    {revenueData.totalTasks > 0 ? `${((revenueData.totalPaidTasks / revenueData.totalTasks) * 100).toFixed(1)}%` : '0%'} of total
                   </p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -732,72 +687,45 @@ const AdminDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">₹{revenueData.totalRevenue.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">From paid tasks</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Payment Methods</CardTitle>
+                  <CardTitle className="text-sm font-medium">Avg Task Value</CardTitle>
                   <UserCog className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">UPI Payments:</span>
-                      <span className="text-sm font-medium">{revenueData.upiPayments}</span>
-                    </div>
-                  </div>
+                  <div className="text-2xl font-bold">₹{revenueData.totalPaidTasks > 0 ? (revenueData.totalRevenue / revenueData.totalPaidTasks).toFixed(0) : 0}</div>
                 </CardContent>
               </Card>
             </div>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Revenue Breakdown</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Revenue Trend (Last 30 Days)</CardTitle></CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Payment Mode Distribution</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span>UPI Manual</span>
-                          <Badge variant="outline">{revenueData.upiPayments} payments</Badge>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">Revenue Metrics</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span>Average Task Value</span>
-                          <span className="font-medium">
-                            ₹{revenueData.totalPaidTasks > 0 ? (revenueData.totalRevenue / revenueData.totalPaidTasks).toFixed(0) : 0}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Payment Success Rate</span>
-                          <span className="font-medium">
-                            {revenueData.totalTasks > 0 ? ((revenueData.totalPaidTasks / revenueData.totalTasks) * 100).toFixed(1) : 0}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={revenueTrendData}>
+                    <defs>
+                      <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(195, 100%, 45%)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(195, 100%, 45%)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} interval={4} stroke="hsl(var(--muted-foreground))" />
+                    <YAxis stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `₹${v}`} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8 }} formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']} />
+                    <Area type="monotone" dataKey="revenue" stroke="hsl(195, 100%, 45%)" fill="url(#revenueGrad)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Ratings Tab */}
+          {/* ── Ratings Tab ───────────────────────────── */}
           <TabsContent value="ratings">
             <Card>
-              <CardHeader>
-                <CardTitle>Ratings & Reviews</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Ratings & Reviews</CardTitle></CardHeader>
               <CardContent>
                 <div className="rounded-md border">
                   <Table>
@@ -813,42 +741,25 @@ const AdminDashboard = () => {
                     </TableHeader>
                     <TableBody>
                       {ratingsLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
-                            Loading ratings...
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={6} className="text-center py-8">Loading ratings...</TableCell></TableRow>
                       ) : ratings.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
-                            No ratings found
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={6} className="text-center py-8">No ratings found</TableCell></TableRow>
                       ) : (
-                        getPaginatedData(ratings).map((rating) => (
-                          <TableRow key={rating.id}>
-                            <TableCell className="font-mono text-sm">{rating.task_id.slice(0, 8)}...</TableCell>
+                        getPaginatedData(ratings).map(r => (
+                          <TableRow key={r.id}>
+                            <TableCell className="font-mono text-sm">{r.task_id.slice(0, 8)}...</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 {Array.from({ length: 5 }).map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-4 w-4 ${
-                                      i < rating.stars 
-                                        ? 'fill-yellow-400 text-yellow-400' 
-                                        : 'text-gray-300'
-                                    }`}
-                                  />
+                                  <Star key={i} className={`h-4 w-4 ${i < r.stars ? 'fill-warning text-warning' : 'text-muted'}`} />
                                 ))}
-                                <span className="ml-1 text-sm">({rating.stars})</span>
+                                <span className="ml-1 text-sm">({r.stars})</span>
                               </div>
                             </TableCell>
-                            <TableCell>{rating.reviewer_name}</TableCell>
-                            <TableCell>{rating.receiver_name}</TableCell>
-                            <TableCell className="max-w-xs truncate">
-                              {rating.review || 'No review provided'}
-                            </TableCell>
-                            <TableCell>{format(new Date(rating.created_at), 'MMM dd, yyyy')}</TableCell>
+                            <TableCell>{r.reviewer_name}</TableCell>
+                            <TableCell>{r.receiver_name}</TableCell>
+                            <TableCell className="max-w-xs truncate">{r.review || 'No review provided'}</TableCell>
+                            <TableCell>{format(new Date(r.created_at), 'MMM dd, yyyy')}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -862,71 +773,31 @@ const AdminDashboard = () => {
 
         {/* Pagination */}
         <div className="flex items-center justify-between mt-6">
-          <p className="text-sm text-muted-foreground">
-            Showing results with current filters
-          </p>
+          <p className="text-sm text-muted-foreground">Showing results with current filters</p>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Previous</Button>
             <span className="text-sm">Page {currentPage}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => prev + 1)}
-              disabled={currentPage >= getTotalPages(users.length)}
-            >
-              Next
-            </Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= getTotalPages(users.length)}>Next</Button>
           </div>
         </div>
 
-        {/* Delete User Confirmation Modal */}
-        <Dialog open={showDeleteModal} onOpenChange={(open) => {
-          if (!isDeleting) {
-            setShowDeleteModal(open);
-            if (!open) {
-              setDeletionReason('');
-            }
-          }
-        }}>
+        {/* Delete User Modal */}
+        <Dialog open={showDeleteModal} onOpenChange={open => { if (!isDeleting) { setShowDeleteModal(open); if (!open) setDeletionReason(''); } }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Deactivate User</DialogTitle>
               <DialogDescription>
-                Are you sure you want to deactivate {selectedUserName}? 
-                The user's data will be preserved for audit purposes but they will no longer be able to access their account.
+                Are you sure you want to deactivate {selectedUserName}? Their data will be preserved for audit purposes.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <label className="text-sm font-medium mb-2 block">
-                Reason for deactivation <span className="text-destructive">*</span>
-              </label>
-              <textarea
-                className="w-full min-h-[80px] px-3 py-2 text-sm border rounded-md bg-background"
-                placeholder="Please provide a reason for deactivating this user (minimum 10 characters)..."
-                value={deletionReason}
-                onChange={(e) => setDeletionReason(e.target.value)}
-                disabled={isDeleting}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                This reason will be logged for audit purposes.
-              </p>
+              <label className="text-sm font-medium mb-2 block">Reason for deactivation <span className="text-destructive">*</span></label>
+              <textarea className="w-full min-h-[80px] px-3 py-2 text-sm border rounded-md bg-background" placeholder="Please provide a reason (minimum 10 characters)..." value={deletionReason} onChange={e => setDeletionReason(e.target.value)} disabled={isDeleting} />
+              <p className="text-xs text-muted-foreground mt-1">This reason will be logged for audit purposes.</p>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleDeleteUser} 
-                disabled={isDeleting || deletionReason.trim().length < 10}
-              >
+              <Button variant="outline" onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDeleteUser} disabled={isDeleting || deletionReason.trim().length < 10}>
                 {isDeleting ? 'Deactivating...' : 'Deactivate User'}
               </Button>
             </DialogFooter>
