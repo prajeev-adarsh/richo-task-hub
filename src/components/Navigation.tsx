@@ -142,10 +142,9 @@ const Navigation = () => {
         ];
       case 'admin':
         return [
-          { icon: BarChart3, label: t('dashboard'), path: '/admin' },
-          { icon: Users, label: t('users'), path: '/admin/users' },
-          { icon: CheckSquare, label: t('tasks'), path: '/admin/tasks' },
-          { icon: BarChart3, label: t('reports'), path: '/admin/reports' },
+          { icon: BarChart3, label: t('dashboard'), path: '/admin-dashboard' },
+          { icon: Users, label: t('users'), path: '/admin-dashboard' },
+          { icon: CheckSquare, label: t('tasks'), path: '/admin-dashboard' },
         ];
       default:
         return [];
