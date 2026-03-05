@@ -195,15 +195,15 @@ const AdminDashboard = () => {
       .channel('admin-activity')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users' }, (payload) => {
         const u = payload.new as any;
-        setActivityFeed(prev => [{
+        setActivityFeed(prev => ([{
           id: `signup-${u.id}`,
-          type: 'signup',
+          type: 'signup' as const,
           icon: <UserPlus className="h-4 w-4" />,
           title: 'New signup',
           description: `${u.name} joined as ${u.role}`,
           timestamp: u.created_at,
           color: 'text-emerald-500',
-        }, ...prev].slice(0, 50));
+        }, ...prev].slice(0, 50)));
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks' }, (payload) => {
         const t = payload.new as any;
