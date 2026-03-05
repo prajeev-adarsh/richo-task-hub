@@ -207,15 +207,15 @@ const AdminDashboard = () => {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks' }, (payload) => {
         const t = payload.new as any;
-        setActivityFeed(prev => [{
+        setActivityFeed(prev => ([{
           id: `task-${t.id}`,
-          type: 'task',
+          type: 'task' as const,
           icon: <ClipboardList className="h-4 w-4" />,
           title: 'Task posted',
           description: `"${t.title}" — ₹${t.budget}`,
           timestamp: t.created_at,
           color: 'text-blue-500',
-        }, ...prev].slice(0, 50));
+        }, ...prev].slice(0, 50)));
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payments' }, (payload) => {
         const p = payload.new as any;
