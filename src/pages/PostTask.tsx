@@ -29,7 +29,7 @@ const taskSchema = z.object({
   description: z.string()
     .min(10, 'Description must be at least 10 characters')
     .max(5000, 'Description must be 5000 characters or less'),
-  category: z.enum(['student', 'skilled', 'ai', 'custom']),
+  category: z.enum(['ai_workflows', 'vibe_coding', 'prompt_engineering', 'ai_video', 'web_design', 'general']),
   location: z.string()
     .min(1, 'Location is required')
     .max(200, 'Location must be 200 characters or less'),
