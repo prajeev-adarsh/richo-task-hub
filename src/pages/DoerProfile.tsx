@@ -63,20 +63,16 @@ interface Review {
 }
 
 const CATEGORIES = [
-  'student', 'skilled', 'creative', 'delivery', 'virtual', 'home_services', 'events', 'other'
+  'ai_workflows', 'vibe_coding', 'prompt_engineering', 'ai_video', 'web_design', 'general'
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  student: 'Student Tasks',
-  skilled: 'Skilled Work',
-  creative: 'Creative & Design',
-  delivery: 'Delivery',
-  virtual: 'Virtual Assistant',
-  home_services: 'Home Services',
-  events: 'Events',
-  other: 'Other',
-  ai: 'Tech & Digital',
-  custom: 'Creative & Design',
+  ai_workflows: 'AI Workflows & Automation',
+  vibe_coding: 'Vibe Coding',
+  prompt_engineering: 'Prompt Engineering',
+  ai_video: 'AI Video Editing',
+  web_design: 'Web Design',
+  general: 'General',
 };
 
 const DoerProfile = () => {
