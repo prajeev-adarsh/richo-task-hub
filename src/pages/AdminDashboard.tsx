@@ -219,15 +219,15 @@ const AdminDashboard = () => {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payments' }, (payload) => {
         const p = payload.new as any;
-        setActivityFeed(prev => [{
+        setActivityFeed(prev => ([{
           id: `payment-${p.id}`,
-          type: 'payment',
+          type: 'payment' as const,
           icon: <DollarSign className="h-4 w-4" />,
           title: `Payment ${p.payment_status}`,
           description: `₹${p.amount}`,
           timestamp: p.created_at,
           color: p.payment_status === 'paid' ? 'text-emerald-500' : 'text-amber-500',
-        }, ...prev].slice(0, 50));
+        }, ...prev].slice(0, 50)));
       })
       .subscribe();
 
