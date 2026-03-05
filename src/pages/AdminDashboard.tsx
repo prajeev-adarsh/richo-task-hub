@@ -511,6 +511,50 @@ const AdminDashboard = () => {
             <TabsTrigger value="ratings"><Star className="h-4 w-4 mr-1.5" />Ratings</TabsTrigger>
           </TabsList>
 
+          {/* ── Activity Feed Tab ──────────────────────── */}
+          <TabsContent value="activity">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  Real-Time Activity Feed
+                  <Badge variant="secondary" className="ml-2 animate-pulse">Live</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {activityFeed.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Activity className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No recent activity</p>
+                  </div>
+                ) : (
+                  <div className="relative space-y-1">
+                    <div className="absolute left-[19px] top-4 bottom-4 w-px bg-border" />
+                    {activityFeed.map((item) => (
+                      <div key={item.id} className="relative flex items-start gap-4 py-3 pl-10 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className={`absolute left-2 top-4 rounded-full p-1.5 bg-background border-2 border-current ${item.color}`}>
+                          {item.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{item.title}</span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {item.type}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">{item.description}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* ── Analytics Tab ─────────────────────────── */}
           <TabsContent value="analytics" className="space-y-6">
             {/* Task Trend */}
