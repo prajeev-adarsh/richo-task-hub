@@ -500,7 +500,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="analytics" className="space-y-6" onValueChange={() => setCurrentPage(1)}>
+        <Tabs defaultValue="activity" className="space-y-6" onValueChange={() => setCurrentPage(1)}>
           <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="activity"><Zap className="h-4 w-4 mr-1.5" />Activity</TabsTrigger>
             <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1.5" />Analytics</TabsTrigger>
