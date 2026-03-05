@@ -61,6 +61,16 @@ interface Rating {
   receiver_name: string;
 }
 
+interface ActivityItem {
+  id: string;
+  type: 'signup' | 'task' | 'payment' | 'rating' | 'application';
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  timestamp: string;
+  color: string;
+}
+
 interface RevenueData {
   totalTasks: number;
   totalPaidTasks: number;
