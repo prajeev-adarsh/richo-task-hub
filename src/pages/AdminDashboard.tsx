@@ -121,6 +121,118 @@ const AdminDashboard = () => {
   const [selectedUserName, setSelectedUserName] = useState('');
   const [deletionReason, setDeletionReason] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
+
+  // ── Build activity feed from loaded data ─────────────
+  const buildActivityFeed = useCallback(() => {
+    const items: ActivityItem[] = [];
+
+    // Recent signups
+    users.slice(0, 30).forEach(u => {
+      items.push({
+        id: `signup-${u.id}`,
+        type: 'signup',
+        icon: <UserPlus className="h-4 w-4" />,
+        title: 'New signup',
+        description: `${u.name} joined as ${u.role}`,
+        timestamp: u.created_at,
+        color: 'text-emerald-500',
+      });
+    });
+
+    // Recent tasks
+    tasks.slice(0, 30).forEach(t => {
+      items.push({
+        id: `task-${t.id}`,
+        type: 'task',
+        icon: <ClipboardList className="h-4 w-4" />,
+        title: 'Task posted',
+        description: `"${t.title}" — ₹${t.budget}`,
+        timestamp: t.created_at,
+        color: 'text-blue-500',
+      });
+    });
+
+    // Recent payments
+    payments.slice(0, 30).forEach(p => {
+      items.push({
+        id: `payment-${p.id}`,
+        type: 'payment',
+        icon: <DollarSign className="h-4 w-4" />,
+        title: `Payment ${p.payment_status}`,
+        description: `₹${p.amount} — ${p.client_email}`,
+        timestamp: p.created_at,
+        color: p.payment_status === 'paid' ? 'text-emerald-500' : 'text-amber-500',
+      });
+    });
+
+    // Recent ratings
+    ratings.slice(0, 20).forEach(r => {
+      items.push({
+        id: `rating-${r.id}`,
+        type: 'rating',
+        icon: <Star className="h-4 w-4" />,
+        title: `${r.stars}-star review`,
+        description: `${r.reviewer_name} → ${r.receiver_name}`,
+        timestamp: r.created_at,
+        color: 'text-yellow-500',
+      });
+    });
+
+    items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    setActivityFeed(items.slice(0, 50));
+  }, [users, tasks, payments, ratings]);
+
+  useEffect(() => {
+    if (!loading) buildActivityFeed();
+  }, [loading, buildActivityFeed]);
+
+  // ── Real-time subscriptions for activity feed ────────
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+
+    const channel = supabase
+      .channel('admin-activity')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users' }, (payload) => {
+        const u = payload.new as any;
+        setActivityFeed(prev => [{
+          id: `signup-${u.id}`,
+          type: 'signup',
+          icon: <UserPlus className="h-4 w-4" />,
+          title: 'New signup',
+          description: `${u.name} joined as ${u.role}`,
+          timestamp: u.created_at,
+          color: 'text-emerald-500',
+        }, ...prev].slice(0, 50));
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks' }, (payload) => {
+        const t = payload.new as any;
+        setActivityFeed(prev => [{
+          id: `task-${t.id}`,
+          type: 'task',
+          icon: <ClipboardList className="h-4 w-4" />,
+          title: 'Task posted',
+          description: `"${t.title}" — ₹${t.budget}`,
+          timestamp: t.created_at,
+          color: 'text-blue-500',
+        }, ...prev].slice(0, 50));
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payments' }, (payload) => {
+        const p = payload.new as any;
+        setActivityFeed(prev => [{
+          id: `payment-${p.id}`,
+          type: 'payment',
+          icon: <DollarSign className="h-4 w-4" />,
+          title: `Payment ${p.payment_status}`,
+          description: `₹${p.amount}`,
+          timestamp: p.created_at,
+          color: p.payment_status === 'paid' ? 'text-emerald-500' : 'text-amber-500',
+        }, ...prev].slice(0, 50));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   // ── Access check ─────────────────────────────────────
   useEffect(() => {
