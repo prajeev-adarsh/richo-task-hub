@@ -39,14 +39,12 @@ interface TaskApplication {
 }
 
 const CATEGORIES = [
-  // Primary AI Categories
-  { value: 'ai', label: 'AI Workflows & Automation' },
-  { value: 'skilled', label: 'Vibe Coding' },
-  { value: 'student', label: 'Prompt Engineering' },
-  { value: 'custom', label: 'AI Video Editing' },
-  // Secondary Categories
+  { value: 'ai_workflows', label: 'AI Workflows & Automation' },
+  { value: 'vibe_coding', label: 'Vibe Coding' },
+  { value: 'prompt_engineering', label: 'Prompt Engineering' },
+  { value: 'ai_video', label: 'AI Video Editing' },
   { value: 'web_design', label: 'Web Design' },
-  { value: 'general', label: 'General Freelancing' },
+  { value: 'general', label: 'General' },
 ];
 
 const SORT_OPTIONS = [
