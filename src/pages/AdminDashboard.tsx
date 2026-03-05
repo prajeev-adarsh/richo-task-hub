@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { format, subDays, startOfDay, eachDayOfInterval } from 'date-fns';
-import { Users, UserCog, CreditCard, TrendingUp, Star, FileText, Download, AlertTriangle, BarChart3, Activity } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { format, subDays, startOfDay, eachDayOfInterval, formatDistanceToNow } from 'date-fns';
+import { Users, UserCog, CreditCard, TrendingUp, Star, FileText, Download, AlertTriangle, BarChart3, Activity, Zap, UserPlus, DollarSign, ClipboardList } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
