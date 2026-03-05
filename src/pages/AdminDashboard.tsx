@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { format, subDays, startOfDay, eachDayOfInterval } from 'date-fns';
-import { Users, UserCog, CreditCard, TrendingUp, Star, FileText, Download, AlertTriangle, BarChart3, Activity } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { format, subDays, startOfDay, eachDayOfInterval, formatDistanceToNow } from 'date-fns';
+import { Users, UserCog, CreditCard, TrendingUp, Star, FileText, Download, AlertTriangle, BarChart3, Activity, Zap, UserPlus, DollarSign, ClipboardList } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
@@ -61,6 +61,16 @@ interface Rating {
   receiver_name: string;
 }
 
+interface ActivityItem {
+  id: string;
+  type: 'signup' | 'task' | 'payment' | 'rating' | 'application';
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  timestamp: string;
+  color: string;
+}
+
 interface RevenueData {
   totalTasks: number;
   totalPaidTasks: number;
@@ -111,6 +121,118 @@ const AdminDashboard = () => {
   const [selectedUserName, setSelectedUserName] = useState('');
   const [deletionReason, setDeletionReason] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
+
+  // ── Build activity feed from loaded data ─────────────
+  const buildActivityFeed = useCallback(() => {
+    const items: ActivityItem[] = [];
+
+    // Recent signups
+    users.slice(0, 30).forEach(u => {
+      items.push({
+        id: `signup-${u.id}`,
+        type: 'signup',
+        icon: <UserPlus className="h-4 w-4" />,
+        title: 'New signup',
+        description: `${u.name} joined as ${u.role}`,
+        timestamp: u.created_at,
+        color: 'text-emerald-500',
+      });
+    });
+
+    // Recent tasks
+    tasks.slice(0, 30).forEach(t => {
+      items.push({
+        id: `task-${t.id}`,
+        type: 'task',
+        icon: <ClipboardList className="h-4 w-4" />,
+        title: 'Task posted',
+        description: `"${t.title}" — ₹${t.budget}`,
+        timestamp: t.created_at,
+        color: 'text-blue-500',
+      });
+    });
+
+    // Recent payments
+    payments.slice(0, 30).forEach(p => {
+      items.push({
+        id: `payment-${p.id}`,
+        type: 'payment',
+        icon: <DollarSign className="h-4 w-4" />,
+        title: `Payment ${p.payment_status}`,
+        description: `₹${p.amount} — ${p.client_email}`,
+        timestamp: p.created_at,
+        color: p.payment_status === 'paid' ? 'text-emerald-500' : 'text-amber-500',
+      });
+    });
+
+    // Recent ratings
+    ratings.slice(0, 20).forEach(r => {
+      items.push({
+        id: `rating-${r.id}`,
+        type: 'rating',
+        icon: <Star className="h-4 w-4" />,
+        title: `${r.stars}-star review`,
+        description: `${r.reviewer_name} → ${r.receiver_name}`,
+        timestamp: r.created_at,
+        color: 'text-yellow-500',
+      });
+    });
+
+    items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    setActivityFeed(items.slice(0, 50));
+  }, [users, tasks, payments, ratings]);
+
+  useEffect(() => {
+    if (!loading) buildActivityFeed();
+  }, [loading, buildActivityFeed]);
+
+  // ── Real-time subscriptions for activity feed ────────
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+
+    const channel = supabase
+      .channel('admin-activity')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users' }, (payload) => {
+        const u = payload.new as any;
+        setActivityFeed(prev => ([{
+          id: `signup-${u.id}`,
+          type: 'signup' as const,
+          icon: <UserPlus className="h-4 w-4" />,
+          title: 'New signup',
+          description: `${u.name} joined as ${u.role}`,
+          timestamp: u.created_at,
+          color: 'text-emerald-500',
+        }, ...prev].slice(0, 50)));
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks' }, (payload) => {
+        const t = payload.new as any;
+        setActivityFeed(prev => ([{
+          id: `task-${t.id}`,
+          type: 'task' as const,
+          icon: <ClipboardList className="h-4 w-4" />,
+          title: 'Task posted',
+          description: `"${t.title}" — ₹${t.budget}`,
+          timestamp: t.created_at,
+          color: 'text-blue-500',
+        }, ...prev].slice(0, 50)));
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payments' }, (payload) => {
+        const p = payload.new as any;
+        setActivityFeed(prev => ([{
+          id: `payment-${p.id}`,
+          type: 'payment' as const,
+          icon: <DollarSign className="h-4 w-4" />,
+          title: `Payment ${p.payment_status}`,
+          description: `₹${p.amount}`,
+          timestamp: p.created_at,
+          color: p.payment_status === 'paid' ? 'text-emerald-500' : 'text-amber-500',
+        }, ...prev].slice(0, 50)));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   // ── Access check ─────────────────────────────────────
   useEffect(() => {
@@ -378,8 +500,9 @@ const AdminDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="analytics" className="space-y-6" onValueChange={() => setCurrentPage(1)}>
-          <TabsList className="grid w-full grid-cols-6">
+        <Tabs defaultValue="activity" className="space-y-6" onValueChange={() => setCurrentPage(1)}>
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="activity"><Zap className="h-4 w-4 mr-1.5" />Activity</TabsTrigger>
             <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1.5" />Analytics</TabsTrigger>
             <TabsTrigger value="users"><Users className="h-4 w-4 mr-1.5" />Users</TabsTrigger>
             <TabsTrigger value="tasks"><FileText className="h-4 w-4 mr-1.5" />Tasks</TabsTrigger>
@@ -387,6 +510,50 @@ const AdminDashboard = () => {
             <TabsTrigger value="revenue"><TrendingUp className="h-4 w-4 mr-1.5" />Revenue</TabsTrigger>
             <TabsTrigger value="ratings"><Star className="h-4 w-4 mr-1.5" />Ratings</TabsTrigger>
           </TabsList>
+
+          {/* ── Activity Feed Tab ──────────────────────── */}
+          <TabsContent value="activity">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  Real-Time Activity Feed
+                  <Badge variant="secondary" className="ml-2 animate-pulse">Live</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {activityFeed.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Activity className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No recent activity</p>
+                  </div>
+                ) : (
+                  <div className="relative space-y-1">
+                    <div className="absolute left-[19px] top-4 bottom-4 w-px bg-border" />
+                    {activityFeed.map((item) => (
+                      <div key={item.id} className="relative flex items-start gap-4 py-3 pl-10 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className={`absolute left-2 top-4 rounded-full p-1.5 bg-background border-2 border-current ${item.color}`}>
+                          {item.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{item.title}</span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              {item.type}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground truncate">{item.description}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* ── Analytics Tab ─────────────────────────── */}
           <TabsContent value="analytics" className="space-y-6">
