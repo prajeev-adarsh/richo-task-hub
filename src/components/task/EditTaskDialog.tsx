@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 const taskSchema = z.object({
   title: z.string().min(1, 'Task title is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  category: z.enum(['student', 'skilled', 'ai', 'custom']),
+  category: z.enum(['ai_workflows', 'vibe_coding', 'prompt_engineering', 'ai_video', 'web_design', 'general']),
   location: z.string().min(1, 'Location is required'),
   is_remote: z.boolean(),
   budget: z.number().min(1, 'Budget must be greater than 0'),
@@ -69,7 +69,7 @@ const EditTaskDialog = ({ task, open, onOpenChange, onSave, saving }: EditTaskDi
       form.reset({
         title: task.title,
         description: task.description,
-        category: task.category as 'student' | 'skilled' | 'ai' | 'custom',
+        category: task.category as 'ai_workflows' | 'vibe_coding' | 'prompt_engineering' | 'ai_video' | 'web_design' | 'general',
         location: task.location,
         is_remote: task.is_remote,
         budget: task.budget,
@@ -141,10 +141,12 @@ const EditTaskDialog = ({ task, open, onOpenChange, onSave, saving }: EditTaskDi
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="student">Student</SelectItem>
-                      <SelectItem value="skilled">Skilled</SelectItem>
-                      <SelectItem value="ai">AI</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
+                      <SelectItem value="ai_workflows">AI Workflows & Automation</SelectItem>
+                      <SelectItem value="vibe_coding">Vibe Coding</SelectItem>
+                      <SelectItem value="prompt_engineering">Prompt Engineering</SelectItem>
+                      <SelectItem value="ai_video">AI Video Editing</SelectItem>
+                      <SelectItem value="web_design">Web Design</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

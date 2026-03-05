@@ -32,7 +32,7 @@ const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSki
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['custom', 'ai', 'student', 'skilled']);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(['ai_workflows', 'vibe_coding', 'prompt_engineering', 'ai_video', 'web_design', 'general']);
 
   useEffect(() => {
     fetchSkills();
