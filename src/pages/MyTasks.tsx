@@ -635,7 +635,7 @@ const MyTasks = () => {
   const handleEditTask = async (taskId: string, data: {
     title: string;
     description: string;
-    category: 'student' | 'skilled' | 'ai' | 'custom';
+    category: 'ai_workflows' | 'vibe_coding' | 'prompt_engineering' | 'ai_video' | 'web_design' | 'general';
     location: string;
     is_remote: boolean;
     budget: number;
