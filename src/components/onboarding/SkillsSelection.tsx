@@ -22,10 +22,12 @@ interface SkillsSelectionProps {
 }
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
-  custom: { label: 'Creative & Design', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
-  ai: { label: 'Tech & Digital', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
-  student: { label: 'Academic & Writing', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
-  skilled: { label: 'Trades & Services', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
+  ai_workflows: { label: 'AI Workflows & Automation', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+  vibe_coding: { label: 'Vibe Coding', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
+  prompt_engineering: { label: 'Prompt Engineering', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
+  ai_video: { label: 'AI Video Editing', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
+  web_design: { label: 'Web Design', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200' },
+  general: { label: 'General', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' },
 };
 
 const SkillsSelection: React.FC<SkillsSelectionProps> = ({ selectedSkills, onSkillsChange }) => {

@@ -112,7 +112,7 @@ const DoerDashboard = () => {
               users!tasks_client_id_fkey(name)
             `)
             .eq('status', 'open')
-            .in('category', skills as ("ai" | "custom" | "skilled" | "student")[])
+            .in('category', skills as ("ai_workflows" | "vibe_coding" | "prompt_engineering" | "ai_video" | "web_design" | "general")[])
             .limit(6);
           recommendedTasksData = data || [];
         }
