@@ -947,10 +947,6 @@ export type Database = {
         | "new_task_posted"
       proof_status: "pending" | "accepted" | "rejected"
       task_category:
-        | "student"
-        | "skilled"
-        | "ai"
-        | "custom"
         | "ai_workflows"
         | "vibe_coding"
         | "prompt_engineering"
@@ -1109,10 +1105,6 @@ export const Constants = {
       ],
       proof_status: ["pending", "accepted", "rejected"],
       task_category: [
-        "student",
-        "skilled",
-        "ai",
-        "custom",
         "ai_workflows",
         "vibe_coding",
         "prompt_engineering",
