@@ -120,10 +120,16 @@ const Auth = ({ defaultRole }: AuthProps) => {
       return;
     }
 
-    if (newPassword.length < 6) {
+    const passwordValidation = z.string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number')
+      .safeParse(newPassword);
+
+    if (!passwordValidation.success) {
       toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters long",
+        title: "Password too weak",
+        description: passwordValidation.error.errors[0].message,
         variant: "destructive",
       });
       return;
@@ -182,37 +188,14 @@ const Auth = ({ defaultRole }: AuthProps) => {
       });
 
       if (error) {
-        // Check if this is an invalid credentials error
         if (error.message === 'Invalid login credentials') {
-          // Check if the email exists in the users table
-          const { data: existingUser } = await supabase
-            .from('users')
-            .select('id')
-            .eq('email', loginEmail.trim().toLowerCase())
-            .maybeSingle();
-
-          if (!existingUser) {
-            // Email doesn't exist - prompt to sign up
-            toast({
-              title: "No account found",
-              description: "This email isn't registered. Create a new account to get started.",
-              variant: "destructive",
-            });
-            // Pre-fill email and switch to signup tab
-            setSignupData(prev => ({ ...prev, email: loginEmail.trim() }));
-            setActiveTab('signup');
-            setIsLoading(false);
-            return;
-          } else {
-            // Email exists but password is wrong
-            toast({
-              title: "Incorrect password",
-              description: "The password you entered is incorrect. Please try again or reset your password.",
-              variant: "destructive",
-            });
-            setIsLoading(false);
-            return;
-          }
+          toast({
+            title: "Login failed",
+            description: "Invalid email or password. Please try again.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
         }
         throw error;
       }
