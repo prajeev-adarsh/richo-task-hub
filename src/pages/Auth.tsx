@@ -188,37 +188,14 @@ const Auth = ({ defaultRole }: AuthProps) => {
       });
 
       if (error) {
-        // Check if this is an invalid credentials error
         if (error.message === 'Invalid login credentials') {
-          // Check if the email exists in the users table
-          const { data: existingUser } = await supabase
-            .from('users')
-            .select('id')
-            .eq('email', loginEmail.trim().toLowerCase())
-            .maybeSingle();
-
-          if (!existingUser) {
-            // Email doesn't exist - prompt to sign up
-            toast({
-              title: "No account found",
-              description: "This email isn't registered. Create a new account to get started.",
-              variant: "destructive",
-            });
-            // Pre-fill email and switch to signup tab
-            setSignupData(prev => ({ ...prev, email: loginEmail.trim() }));
-            setActiveTab('signup');
-            setIsLoading(false);
-            return;
-          } else {
-            // Email exists but password is wrong
-            toast({
-              title: "Incorrect password",
-              description: "The password you entered is incorrect. Please try again or reset your password.",
-              variant: "destructive",
-            });
-            setIsLoading(false);
-            return;
-          }
+          toast({
+            title: "Login failed",
+            description: "Invalid email or password. Please try again.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
         }
         throw error;
       }
