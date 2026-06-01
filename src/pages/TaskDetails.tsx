@@ -330,7 +330,7 @@ const TaskDetails = () => {
               <CardContent className="space-y-6">
                 {/* Description */}
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">Description</h3>
+                  <h2 className="font-semibold text-lg mb-2">Description</h2>
                   <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
                     {task.description}
                   </p>
