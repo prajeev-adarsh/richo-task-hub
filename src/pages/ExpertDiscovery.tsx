@@ -425,10 +425,11 @@ const ExpertDiscovery = () => {
               </Card>
             </CollapsibleContent>
           </Collapsible>
-        </div>
+        </section>
 
         {/* Results */}
-        <div className="space-y-4">
+        <section aria-labelledby="results-heading" className="space-y-4">
+          <h2 id="results-heading" className="sr-only">Expert search results</h2>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
               {loading ? 'Loading...' : `${experts.length} expert${experts.length !== 1 ? 's' : ''} found`}
