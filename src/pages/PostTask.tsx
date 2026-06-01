@@ -298,7 +298,7 @@ const PostTask = () => {
             </Form>
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   );
 };
