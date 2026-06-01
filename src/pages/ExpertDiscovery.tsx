@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/components/UserContext';
 import { useToast } from '@/hooks/use-toast';
 import Navigation from '@/components/Navigation';
+import SEO from '@/components/SEO';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -282,6 +283,11 @@ const ExpertDiscovery = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Find AI Experts | Richo"
+        description="Browse vetted AI freelancers on Richo — prompt engineers, vibe coders, automation experts and AI video editors ready to hire."
+        path="/find-experts"
+      />
       <Navigation />
       
       <main className="container mx-auto px-4 py-6 max-w-7xl">
