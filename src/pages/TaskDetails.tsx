@@ -481,7 +481,7 @@ const TaskDetails = () => {
             }} />
           </DialogContent>
         </Dialog>
-      </div>
+      </main>
     </div>
   );
 };
