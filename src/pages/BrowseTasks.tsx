@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import Navigation from '@/components/Navigation';
+import SEO from '@/components/SEO';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Task {
@@ -285,8 +286,13 @@ const BrowseTasks = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="Browse AI Tasks & Projects | Richo"
+        description="Find paid AI freelance tasks — prompt engineering, vibe coding, AI automation and AI video editing projects open for application."
+        path="/browse-tasks"
+      />
       <Navigation />
-      <div className="max-w-7xl mx-auto p-6">
+      <main className="max-w-7xl mx-auto p-6">
         {/* Header with Search */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
