@@ -555,7 +555,7 @@ const ExpertDiscovery = () => {
               ))}
             </div>
           )}
-        </div>
+        </section>
 
         {/* Contact Expert Dialog */}
         <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
