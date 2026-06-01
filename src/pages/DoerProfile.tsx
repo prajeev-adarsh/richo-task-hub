@@ -1007,8 +1007,8 @@ const DoerProfile = () => {
                         {selectedImageIndex + 1} / {portfolio.length}
                       </span>
                     )}
-                  </div>
-                </div>
+      </main>
+    </div>
               </div>
             )}
           </DialogContent>
