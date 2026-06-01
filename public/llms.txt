@@ -1,0 +1,18 @@
+# Richo
+
+> Richo is the AI freelance marketplace — connect with vetted Prompt Engineers, Vibe Coders, AI Automation Experts, and AI Video Editors, or showcase your AI skills and get hired.
+
+Richo helps clients post AI projects and hire specialised AI talent, and helps freelancers discover paid AI work across automation, prompt engineering, web/vibe coding, and AI video editing.
+
+## Pages
+
+- [Home](/): Overview of the Richo AI freelance marketplace.
+- [Browse Tasks](/browse-tasks): Open AI projects and tasks for freelancers to apply to.
+- [Find AI Experts](/find-experts): Directory of vetted AI freelancers and specialists.
+- [Post a Task](/post-task): Clients can post a new AI project for hire.
+- [Sign In / Sign Up](/auth): Create an account or log in as a client or expert.
+
+## Optional
+
+- [Client Sign In](/auth/client)
+- [Expert Sign In](/auth/expert)

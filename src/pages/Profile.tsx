@@ -131,6 +131,7 @@ const Profile = () => {
                   size="sm"
                   variant="outline"
                   className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
+                  aria-label="Change profile photo"
                 >
                   <Camera className="h-4 w-4" />
                 </Button>

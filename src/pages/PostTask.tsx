@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
+import SEO from '@/components/SEO';
 
 // Validation schema with length limits matching database constraints
 const taskSchema = z.object({
@@ -100,10 +101,16 @@ const PostTask = () => {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="max-w-2xl mx-auto">
+      <SEO
+        title="Post an AI Task | Richo"
+        description="Post your AI project on Richo and get matched with vetted prompt engineers, vibe coders and AI automation experts."
+        path="/post-task"
+      />
+      <main className="max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6">Post a New AI Task</h1>
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold">Post a New Task</CardTitle>
+            <CardTitle className="text-2xl font-bold">Task Details</CardTitle>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -291,7 +298,7 @@ const PostTask = () => {
             </Form>
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   );
 };

@@ -246,6 +246,7 @@ const Navigation = () => {
               variant="outline" 
               size="sm"
               onClick={() => navigate('/profile')}
+              aria-label="Open profile"
             >
               <User className="h-4 w-4" />
             </Button>

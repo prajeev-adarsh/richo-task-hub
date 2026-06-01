@@ -12,3 +12,17 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin-dashboard
+Disallow: /client-dashboard
+Disallow: /doer-dashboard
+Disallow: /my-tasks
+Disallow: /my-gigs
+Disallow: /my-applications
+Disallow: /saved-tasks
+Disallow: /payments
+Disallow: /earnings
+Disallow: /profile
+Disallow: /chat/
+Disallow: /onboarding/
+
+Sitemap: https://richo.lovable.app/sitemap.xml
