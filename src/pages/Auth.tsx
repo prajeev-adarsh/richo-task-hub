@@ -443,7 +443,9 @@ const Auth = ({ defaultRole }: AuthProps) => {
                 <span className="text-white font-bold text-2xl">R</span>
               </div>
             )}
-            <h1 className="text-4xl font-bold text-gradient">Richo</h1>
+            <h1 className="text-4xl font-bold text-gradient">
+              Richo<span className="sr-only"> — Sign In or Create Account</span>
+            </h1>
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">{roleContent.title}</h2>
           <p className="text-muted-foreground">{roleContent.description}</p>

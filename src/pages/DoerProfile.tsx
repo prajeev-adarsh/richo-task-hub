@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import Navigation from '@/components/Navigation';
 import { format } from 'date-fns';
+import SEO from '@/components/SEO';
 
 interface SkillData {
   name: string;
@@ -384,10 +385,18 @@ const DoerProfile = () => {
     );
   }
 
+  const skillNames = profile.skills.map((s) => s.name).filter(Boolean).slice(0, 5).join(', ');
+  const seoDesc = `${profile.name} — AI expert on Richo${skillNames ? ` specialising in ${skillNames}` : ''}. ${profile.completed_tasks} completed tasks, ${profile.total_reviews} reviews. Hire vetted AI talent.`.slice(0, 160);
+
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title={`${profile.name} — AI Expert on Richo`}
+        description={seoDesc}
+        path={`/doer/${profile.id}`}
+      />
       <Navigation />
-      <div className="container mx-auto px-4 py-6 max-w-5xl">
+      <main className="container mx-auto px-4 py-6 max-w-5xl">
         {/* Back Button */}
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -1004,7 +1013,7 @@ const DoerProfile = () => {
             )}
           </DialogContent>
         </Dialog>
-      </div>
+      </main>
     </div>
   );
 };
