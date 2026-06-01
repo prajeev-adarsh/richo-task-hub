@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Navigation from '@/components/Navigation';
+import SEO from '@/components/SEO';
 import TaskComments from '@/components/task/TaskComments';
 import TaskTimeline from '@/components/task/TaskTimeline';
 import ApplicantsList from '@/components/task/ApplicantsList';
@@ -257,9 +258,33 @@ const TaskDetails = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title={`${task.title} | Richo`}
+        description={task.description.slice(0, 155)}
+        path={`/task/${task.id}`}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'JobPosting',
+          title: task.title,
+          description: task.description,
+          datePosted: task.created_at,
+          validThrough: task.deadline,
+          employmentType: 'CONTRACTOR',
+          jobLocation: task.is_remote
+            ? { '@type': 'Place', address: 'Remote' }
+            : { '@type': 'Place', address: { '@type': 'PostalAddress', addressLocality: task.location } },
+          baseSalary: {
+            '@type': 'MonetaryAmount',
+            currency: 'INR',
+            value: { '@type': 'QuantitativeValue', value: task.budget, unitText: 'PROJECT' },
+          },
+          hiringOrganization: { '@type': 'Organization', name: task.client?.name || 'Richo Client' },
+        }}
+      />
       <Navigation />
-      
-      <div className="max-w-7xl mx-auto p-6">
+
+      <main className="max-w-7xl mx-auto p-6">
+        <h1 className="sr-only">{task.title}</h1>
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}

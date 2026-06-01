@@ -599,7 +599,7 @@ const BrowseTasks = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </main>
     </div>
   );
 };
