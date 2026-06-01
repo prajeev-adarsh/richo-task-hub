@@ -76,7 +76,7 @@ const RoleSelector = () => {
             <div className="w-14 h-14 gradient-primary rounded-2xl flex items-center justify-center glow-primary animate-pulse-glow">
               <Zap className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-gradient">Richo</h1>
+            <h1 className="text-5xl md:text-6xl font-bold text-gradient">Richo — The AI Freelance Marketplace</h1>
           </div>
 
           {/* Main Headline */}

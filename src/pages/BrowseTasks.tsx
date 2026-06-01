@@ -327,6 +327,7 @@ const BrowseTasks = () => {
               size="icon"
               className="absolute right-2 top-1/2 -translate-y-1/2"
               onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -471,6 +472,8 @@ const BrowseTasks = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
+                            aria-label={isTaskSaved(task.id) ? 'Remove from saved tasks' : 'Save task'}
+                            aria-pressed={isTaskSaved(task.id)}
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleSaveTask(task.id);
