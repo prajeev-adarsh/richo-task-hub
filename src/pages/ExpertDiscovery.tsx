@@ -300,7 +300,8 @@ const ExpertDiscovery = () => {
         </div>
 
         {/* Search and Filters */}
-        <div className="space-y-4 mb-8">
+        <section aria-labelledby="search-heading" className="space-y-4 mb-8">
+          <h2 id="search-heading" className="sr-only">Search and filter AI experts</h2>
           {/* Search Bar */}
           <div className="flex gap-3">
             <div className="relative flex-1">
