@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UserPlus, LogIn, Globe, Mail, CheckCircle, ArrowLeft, Sparkles, Brain } from 'lucide-react';
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
-// Google auth removed per user request
+import GoogleAuthButton from '@/components/auth/GoogleAuthButton';
 
 // Validation schemas
 const signupSchema = z.object({
