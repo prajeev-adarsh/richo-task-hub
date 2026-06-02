@@ -225,13 +225,31 @@ const GoogleSetupWizard: React.FC<GoogleSetupWizardProps> = ({ open: controlledO
     setTesting(true);
     setTestResult(null);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          skipBrowserRedirect: true,
+        },
       });
       if (error) throw error;
-      // On success the browser is redirected, so this block usually won't run.
-      setTestResult({ ok: true, message: 'Redirecting to Google…' });
+      if (!data?.url) throw new Error('No OAuth URL returned');
+
+      const res = await fetch(data.url, { method: 'GET', redirect: 'manual' });
+      if (res.type !== 'opaqueredirect' && res.status >= 400) {
+        let bodyMsg = '';
+        try {
+          const body = await res.json();
+          bodyMsg = body.msg || body.error_description || body.error || '';
+        } catch {
+          /* ignore */
+        }
+        throw new Error(bodyMsg || `OAuth provider returned ${res.status}`);
+      }
+
+      // Success — redirect to Google to finish testing
+      setTestResult({ ok: true, message: 'Configuration looks correct. Redirecting to Google…' });
+      setTimeout(() => { window.location.href = data.url; }, 800);
     } catch (err: any) {
       const parsed = parseOAuthError(err);
       setTestResult({ ok: false, message: `${parsed.title} — ${parsed.description}`, fixStep: parsed.wizardStep });
