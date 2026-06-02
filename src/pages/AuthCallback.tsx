@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { parseOAuthError } from '@/lib/oauthErrors';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -13,6 +14,17 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        // Detect OAuth errors returned in the URL (query or hash fragment)
+        const search = new URLSearchParams(window.location.search);
+        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        const errParam = search.get('error') || hash.get('error');
+        const errDesc = search.get('error_description') || hash.get('error_description');
+        if (errParam) {
+          const parsed = parseOAuthError(errDesc || errParam);
+          navigate('/auth', { replace: true, state: { oauthError: parsed } });
+          return;
+        }
+
         // Get the session from the URL hash
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
