@@ -621,7 +621,12 @@ const Auth = ({ defaultRole }: AuthProps) => {
                 <CardTitle>{roleContent.signupTitle}</CardTitle>
                 <CardDescription>{roleContent.signupDescription}</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <GoogleAuthButton mode="signup" role={presetRole || (signupData.role as 'client' | 'doer') || undefined} />
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or sign up with email</span></div>
+                </div>
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
