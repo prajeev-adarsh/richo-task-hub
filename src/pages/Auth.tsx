@@ -14,6 +14,10 @@ import { UserPlus, LogIn, Globe, Mail, CheckCircle, ArrowLeft, Sparkles, Brain }
 import { logger } from '@/lib/logger';
 import { z } from 'zod';
 import GoogleAuthButton from '@/components/auth/GoogleAuthButton';
+import GoogleSetupWizard from '@/components/auth/GoogleSetupWizard';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, Settings2 } from 'lucide-react';
+import { openGoogleSetupWizard, type ParsedOAuthError } from '@/lib/oauthErrors';
 
 // Validation schemas
 const signupSchema = z.object({
@@ -413,9 +417,32 @@ const Auth = ({ defaultRole }: AuthProps) => {
 
   // Email verification screen removed - auto-login after signup
 
+  const oauthErrorFromState = (location.state as { oauthError?: ParsedOAuthError } | null)?.oauthError;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
+      <GoogleSetupWizard />
       <div className="w-full max-w-md">
+        {oauthErrorFromState && (
+          <Alert variant="destructive" className="mb-4 rounded-2xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{oauthErrorFromState.title}</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>{oauthErrorFromState.description}</p>
+              {oauthErrorFromState.wizardStep !== undefined && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => openGoogleSetupWizard(oauthErrorFromState.wizardStep)}
+                >
+                  <Settings2 className="h-3.5 w-3.5 mr-2" />
+                  Open setup wizard
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
         {/* Back button for role-specific pages */}
         {presetRole && (
           <div className="mb-4">
