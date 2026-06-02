@@ -24,15 +24,47 @@ const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ mode, role, classNa
     try {
       if (role) localStorage.setItem('pending_oauth_role', role);
 
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      // Get the OAuth URL without redirecting so we can pre-flight-check it.
+      // Supabase otherwise redirects the browser straight to /authorize, where
+      // a misconfigured provider returns a raw JSON 400 page (bad UX).
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: { access_type: 'offline', prompt: 'consent' },
+          skipBrowserRedirect: true,
         },
       });
 
       if (oauthError) throw oauthError;
+      if (!data?.url) throw new Error('No OAuth URL returned');
+
+      // Pre-flight: HEAD/GET the authorize URL. If the provider isn't enabled
+      // or redirect URLs are wrong, Supabase returns a JSON error instead of
+      // a 302 to Google. fetch() with redirect: 'manual' won't follow the 302.
+      try {
+        const res = await fetch(data.url, { method: 'GET', redirect: 'manual' });
+        // A successful authorize returns an opaqueredirect (status 0) or 3xx.
+        // Errors return 4xx with JSON body.
+        if (res.type !== 'opaqueredirect' && res.status >= 400) {
+          let bodyMsg = '';
+          try {
+            const body = await res.json();
+            bodyMsg = body.msg || body.error_description || body.error || '';
+          } catch {
+            /* ignore */
+          }
+          throw new Error(bodyMsg || `OAuth provider returned ${res.status}`);
+        }
+      } catch (preflightErr: any) {
+        // Network/CORS failures here are non-fatal: fall through to redirect.
+        if (preflightErr?.message && /provider|redirect|enabled|invalid/i.test(preflightErr.message)) {
+          throw preflightErr;
+        }
+      }
+
+      // All good — redirect the browser to start the real OAuth flow.
+      window.location.href = data.url;
     } catch (err: any) {
       logger.error('Google auth error:', err);
       const parsed = parseOAuthError(err);
