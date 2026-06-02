@@ -529,7 +529,12 @@ const Auth = ({ defaultRole }: AuthProps) => {
                 <CardTitle>Welcome back</CardTitle>
                 <CardDescription>Sign in to your account to continue</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <GoogleAuthButton mode="login" role={presetRole} />
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or continue with email</span></div>
+                </div>
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="login-email">Email</Label>
