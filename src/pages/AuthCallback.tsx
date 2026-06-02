@@ -49,11 +49,28 @@ const AuthCallback = () => {
             }
           }
         } else {
-          // New user via OAuth - but Google auth is disabled
-          // Sign out and redirect to auth page
-          await supabase.auth.signOut();
-          setError('Social login is currently disabled. Please sign up with email and password.');
-          setTimeout(() => navigate('/auth'), 3000);
+          // New OAuth user — create profile using pending role from localStorage
+          const pendingRole = (localStorage.getItem('pending_oauth_role') as 'client' | 'doer') || 'client';
+          localStorage.removeItem('pending_oauth_role');
+
+          const meta = session.user.user_metadata || {};
+          const fullName = meta.full_name || meta.name || session.user.email?.split('@')[0] || 'User';
+
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert({
+              auth_user_id: session.user.id,
+              name: fullName,
+              email: session.user.email!,
+              photo_url: meta.avatar_url || meta.picture || null,
+              role: pendingRole,
+              active_role: pendingRole,
+              language: 'en',
+            });
+
+          if (insertError) throw insertError;
+
+          navigate(pendingRole === 'doer' ? '/onboarding/expert' : '/onboarding/client');
         }
       } catch (err: any) {
         logger.error('Auth callback error:', err);
